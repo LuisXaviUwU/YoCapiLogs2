@@ -436,72 +436,11 @@ async function loadLocalLogs(channel, date) {
       data = { messages: allMsgs };
 
     } else {
-      // --- Day mode: load from Supabase then ALWAYS merge with API for newer msgs ---
+      // --- Day mode: load ONLY from Firebase (instant fast loading) ---
       const supabaseData = typeof getSavedLog === 'function' ? await getSavedLog(channel, date) : null;
       const supabaseMsgs = (supabaseData && supabaseData.messages) ? supabaseData.messages : [];
       
-      // Find the latest timestamp in Supabase data (to know if API has newer messages)
-      let lastSupabaseTs = 0;
-      for (const m of supabaseMsgs) {
-        const t = new Date(m.timestamp).getTime();
-        if (t > lastSupabaseTs) lastSupabaseTs = t;
-      }
-
-      // Always also fetch from API to catch messages after the Supabase snapshot
-      let apiMsgs = [];
-      try {
-        const fetchApi = async (url) => {
-          const resp = await fetch(url);
-          if (!resp.ok) {
-            if (resp.status === 404 || resp.status === 400) return { messages: [] };
-            throw new Error(`Error ${resp.status}: ${resp.statusText}`);
-          }
-          return await resp.json();
-        };
-
-        const localStart = new Date(year, parseInt(month) - 1, parseInt(day), 0, 0, 0);
-        const localEnd   = new Date(year, parseInt(month) - 1, parseInt(day), 23, 59, 59, 999);
-        const utcDay1 = { y: localStart.getUTCFullYear(), m: localStart.getUTCMonth() + 1, d: localStart.getUTCDate() };
-        const utcDay2 = { y: localEnd.getUTCFullYear(),   m: localEnd.getUTCMonth() + 1,   d: localEnd.getUTCDate() };
-        const urlsToFetch = [`${API_BASE}/channel/${channel}/${utcDay1.y}/${utcDay1.m}/${utcDay1.d}?json=1`];
-        if (utcDay1.y !== utcDay2.y || utcDay1.m !== utcDay2.m || utcDay1.d !== utcDay2.d) {
-          urlsToFetch.push(`${API_BASE}/channel/${channel}/${utcDay2.y}/${utcDay2.m}/${utcDay2.d}?json=1`);
-        }
-        const results = await Promise.all(urlsToFetch.map(url => fetchApi(url)));
-        for (const res of results) {
-          if (res && res.messages) apiMsgs = apiMsgs.concat(res.messages);
-        }
-        // Filter to correct local date
-        apiMsgs = apiMsgs.filter(msg => {
-          const d2 = new Date(msg.timestamp);
-          return d2.getFullYear() === parseInt(year, 10) &&
-            d2.getMonth() === parseInt(month, 10) - 1 &&
-            d2.getDate() === parseInt(day, 10);
-        });
-      } catch (apiErr) {
-        console.warn('[loadLocalLogs] API fetch failed, using Supabase only:', apiErr.message);
-      }
-
-      // Merge: combine Supabase + API, dedup, sort
-      const combined = [...supabaseMsgs, ...apiMsgs];
-      const seenIds = new Set();
-      const merged = combined.filter(msg => {
-        const id = msg.tags?.id || msg.timestamp + msg.displayName + msg.text;
-        if (seenIds.has(id)) return false;
-        seenIds.add(id);
-        return true;
-      });
-      merged.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-
-      // Re-save if the API added newer messages
-      const lastMergedTs = merged.length ? new Date(merged[merged.length - 1].timestamp).getTime() : 0;
-      if (merged.length > supabaseMsgs.length || lastMergedTs > lastSupabaseTs) {
-        if (typeof saveLogsLocallySupabase === 'function') {
-          saveLogsLocallySupabase(channel, date, merged).catch(console.error);
-        }
-      }
-
-      data = { messages: merged };
+      data = { messages: supabaseMsgs };
     } // end else (day mode)
 
     if (!data || !data.messages || data.messages.length === 0) {
