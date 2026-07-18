@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YoCapi App - Visor de Logs</title>
+    <meta name="description" content="Visor de logs de chat de Twitch para el canal yocapi_pr. Busca mensajes de cualquier usuario.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="app">
+
+        <!-- ══ SIDEBAR ══════════════════════════════════════════════ -->
+        <aside class="sidebar">
+            <div class="sidebar-logo">
+                <img src="img/yocapi.png" alt="YoCapi Logo" class="logo-img">
+                <div class="logo-text">
+                    <h1>YoCapi App</h1>
+                    <span class="logo-subtitle">Público</span>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <!-- Visor de Logs collapsible -->
+                <div class="sidebar-collapse open" id="sidebar-collapse-visor">
+                    <button class="nav-item nav-item-expand active" id="nav-visor">
+                        <svg class="expand-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="9 18 15 12 9 6"/>
+                        </svg>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                        </svg>
+                        <span>Visor de Logs</span>
+                    </button>
+                    <div class="sidebar-collapse-body" id="sidebar-visor-body">
+                        <button class="nav-item nav-sub-item active" id="nav-sub-local" data-source="local">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                                <line x1="12" y1="11" x2="12" y2="17"/>
+                                <polyline points="9 14 12 17 15 14"/>
+                            </svg>
+                            Local (Supabase)
+                        </button>
+                        <button class="nav-item nav-sub-item" id="nav-sub-blerp" data-source="blerp">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+                                <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+                                <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+                            </svg>
+                            Blerp
+                        </button>
+                    </div>
+                </div>
+            </nav>
+
+            <div class="sidebar-bottom">
+                <a href="https://youtube.com/playlist?list=PLgEm6o8d2G4Y903VUbD0J5i1BkmwGWiGb&si=tQcE7Ut2giDSI0c7"
+                   target="_blank" rel="noopener noreferrer"
+                   class="nav-item nav-item-link nav-item-youtube">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M10 15l5-3-5-3v6z"/>
+                        <rect x="2" y="6" width="20" height="12" rx="3"/>
+                    </svg>
+                    Playlist YouTube
+                </a>
+                <a href="admin/" class="nav-item nav-item-link" style="margin-top:4px;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                    </svg>
+                    Admin
+                </a>
+                <div class="server-status-widget" id="server-status-widget">
+                    <span class="server-dot" id="server-dot"></span>
+                    <span class="server-status-label" id="server-status-label">Supabase conectado</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- ══ MAIN CONTENT ══════════════════════════════════════════ -->
+        <div class="main-content">
+
+            <!-- ══════ VIEW: LOGS ══════════════════════════════════════ -->
+            <div id="view-logs" class="view-section" style="display:flex; flex-direction:column; flex:1; overflow:hidden;">
+
+                <header class="top-header">
+                    <h2 id="top-title" style="font-size:1.1rem; font-weight:700; color:var(--text-hi); margin:0;">
+                        Visor de Logs <span class="mode-badge local-badge">LOCAL</span>
+                    </h2>
+                    <div class="top-header-right" style="display:flex; gap:10px; align-items:center;">
+                        <div class="stat-badge" id="stat-messages" style="display:none;">
+                            <span class="stat-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
+                            <span class="stat-value" id="stat-count">0</span>
+                            <span class="stat-label">msgs</span>
+                        </div>
+                    </div>
+                </header>
+
+                <!-- ── Panel principal: API / Local logs ── -->
+                <div id="panel-api-local" class="tab-panel active" style="display:flex; flex-direction:column; flex:1; overflow:hidden;">
+                    <section class="search-panel" id="search-panel">
+                        <div class="search-inner">
+
+                            <!-- Omnibar Local -->
+                            <div id="local-omnibar-wrap">
+                                <div class="local-logs-panel" id="local-logs-panel">
+                                    <div class="omnibar omnibar-local">
+                                        <div class="omni-section omni-channel" style="flex:1;">
+                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                                                <line x1="4" y1="9" x2="20" y2="9"/>
+                                                <line x1="4" y1="15" x2="20" y2="15"/>
+                                                <line x1="10" y1="3" x2="8" y2="21"/>
+                                                <line x1="16" y1="3" x2="14" y2="21"/>
+                                            </svg>
+                                            <input type="text" id="local-channel-input" class="omni-input" value="yocapi_pr"
+                                                placeholder="Canal" autocomplete="off" spellcheck="false" readonly style="opacity: 0.7; cursor: default;">
+                                        </div>
+                                        <div class="omni-divider"></div>
+                                        <div class="omni-section omni-user" style="flex:1;">
+                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                                                <circle cx="12" cy="12" r="4"/>
+                                                <path d="M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-3.92 7.94"/>
+                                            </svg>
+                                            <input type="text" id="local-user-input" class="omni-input"
+                                                placeholder="Usuario (opcional)" autocomplete="off" spellcheck="false">
+                                        </div>
+                                        <div class="omni-actions">
+                                            <button class="btn-load" id="btn-local-load" type="button">
+                                                <span class="btn-text">Cargar local</span>
+                                            </button>
+                                            <button class="btn-history" id="btn-local-history" type="button" title="Historial de usuarios">
+                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                    <circle cx="12" cy="8" r="4"/>
+                                                    <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="local-dates-container" id="local-dates-container">
+                                        <p class="local-dates-empty" id="local-dates-empty">Cargando fechas para yocapi_pr...</p>
+                                        <div class="date-row" id="local-date-row" style="display:none; margin-top:10px; align-items:center; gap:8px;">
+                                            <div class="select-wrapper day-col" style="width:62px;"><select id="local-day-select" class="field-input field-date"></select></div>
+                                            <div class="select-wrapper" style="width:116px;"><select id="local-month-select" class="field-input field-date"></select></div>
+                                            <div class="select-wrapper" style="width:78px;"><select id="local-year-select" class="field-input field-date"></select></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="filter-row" id="filter-row" style="display:none; margin-top:10px;">
+                                <div class="filter-input-wrap">
+                                    <svg class="filter-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                        <circle cx="11" cy="11" r="8"/>
+                                        <path d="M21 21l-4.35-4.35"/>
+                                    </svg>
+                                    <input type="text" id="filter-input" class="filter-input" placeholder="Filtrar mensajes...">
+                                    <span class="filter-count" id="filter-count"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="nav-bar" id="nav-bar" style="display:none; padding:0 20px 8px;">
+                            <div class="nav-controls">
+                                <button class="nav-btn" id="nav-prev" title="Anterior">
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                                        <path d="M18 15l-6-6-6 6"/>
+                                    </svg>
+                                    Anterior
+                                </button>
+                                <span class="nav-pos" id="nav-pos">-</span>
+                                <button class="nav-btn" id="nav-next" title="Siguiente">
+                                    Siguiente
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                                        <path d="M6 9l6 6 6-6"/>
+                                    </svg>
+                                </button>
+                            </div>
+                            <button class="nav-btn" id="nav-sort" title="Invertir orden">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M7 15l5 5 5-5M7 9l5-5 5 5"/>
+                                </svg>
+                                Ordenar
+                            </button>
+                            <button class="nav-btn nav-save-btn" id="nav-save-local" title="Guardar logs en Supabase" style="display:none;">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+                                    <polyline points="17 21 17 13 7 13 7 21"/>
+                                    <polyline points="7 3 7 8 15 8"/>
+                                </svg>
+                                Guardar
+                            </button>
+                        </div>
+                    </section>
+
+                    <!-- Messages -->
+                    <main class="messages-container" id="messages-container">
+                        <div class="empty-state" id="empty-state">
+                            <div class="empty-icon">
+                                <svg width="64" height="64" viewBox="0 0 24 24" fill="none">
+                                    <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" stroke="url(#eg)" stroke-width="1.5"/>
+                                    <defs>
+                                        <linearGradient id="eg" x1="3" y1="3" x2="21" y2="19">
+                                            <stop stop-color="#9146FF"/>
+                                            <stop offset="1" stop-color="#6441A5"/>
+                                        </linearGradient>
+                                    </defs>
+                                </svg>
+                            </div>
+                            <h2 class="empty-title">Busca los logs de chat</h2>
+                            <p class="empty-desc">Ingresa el canal y usuario para ver sus mensajes</p>
+                        </div>
+                        <div class="loading-state" id="loading-state" style="display:none;">
+                            <div class="loading-spinner"></div>
+                            <p class="loading-text">Cargando mensajes...</p>
+                        </div>
+                        <div class="error-state" id="error-state" style="display:none;">
+                            <div class="error-icon">
+                                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+                                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                                    <line x1="12" y1="9" x2="12" y2="13"/>
+                                    <line x1="12" y1="17" x2="12.01" y2="17"/>
+                                </svg>
+                            </div>
+                            <h2 class="error-title" id="error-title">Error</h2>
+                            <p class="error-desc" id="error-desc">No se pudieron cargar los mensajes</p>
+                        </div>
+                        <div class="messages-list" id="messages-list" style="display:none;"></div>
+                    </main>
+                </div>
+
+                <!-- Panel: Blerp -->
+                <div id="panel-blerp" class="tab-panel" style="display:none; flex-direction:column; flex:1; overflow-y:auto; padding:20px; max-width:800px; margin:0 auto; width:100%;">
+                    <div style="font-size:18px; font-weight:700; color:var(--text-hi); display:flex; align-items:center; gap:8px; margin-bottom:20px;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+                            <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+                            <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+                        </svg>
+                        Blerp Overlay Simulator
+                    </div>
+                    <div class="blerp-top-row">
+                        <div class="blerp-preview-area">
+                            <div class="blerp-checkerboard">
+                                <canvas id="blerp-canvas"></canvas>
+                            </div>
+                            <p class="blerp-hint" id="blerp-status"></p>
+                            <p class="blerp-hint">Así se ve la animación en stream (fondo transparente). La animación se repite en loop.</p>
+                        </div>
+                        <div class="blerp-style-panel">
+                            <div class="blerp-section-label">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="3"/>
+                                    <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+                                </svg>
+                                Personalización
+                            </div>
+                            <div class="blerp-style-controls">
+                                <label class="blerp-style-field"><span>Fondo (inicio)</span><input type="color" id="blerp-style-bg1" value="#0f0a19"></label>
+                                <label class="blerp-style-field"><span>Fondo (fin)</span><input type="color" id="blerp-style-bg2" value="#190f2d"></label>
+                                <label class="blerp-style-field"><span>Borde</span><input type="color" id="blerp-style-border" value="#9146ff"></label>
+                                <label class="blerp-style-checkbox"><input type="checkbox" id="blerp-style-border-enabled" checked><span>Mostrar borde</span></label>
+                            </div>
+                            <button class="blerp-style-reset" id="btn-blerp-style-reset" title="Restablecer colores">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                                    <polyline points="1 4 1 10 7 10"/>
+                                    <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
+                                </svg>
+                                Restablecer colores
+                            </button>
+                        </div>
+                    </div>
+                    <div class="blerp-section">
+                        <div class="blerp-real-options" id="blerp-real-options" style="display:none;"></div>
+                        <div class="blerp-real-sound" id="blerp-real-sound" style="display:none;">
+                            <div class="blerp-real-sound-label">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+                                    <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+                                </svg>
+                                Sonido seleccionado
+                            </div>
+                            <div class="blerp-real-sound-body">
+                                <img id="blerp-real-img" class="blerp-real-img" alt="">
+                                <div class="blerp-real-info">
+                                    <div class="blerp-real-title" id="blerp-real-title"></div>
+                                    <div class="blerp-real-meta" id="blerp-real-meta"></div>
+                                </div>
+                                <audio id="blerp-real-audio" class="blerp-real-audio" controls preload="none"></audio>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="blerp-section blerp-download-section">
+                        <div class="blerp-section-label">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                <polyline points="7 10 12 15 17 10"/>
+                                <line x1="12" y1="15" x2="12" y2="3"/>
+                            </svg>
+                            Descargar
+                        </div>
+                        <div class="blerp-actions">
+                            <button class="btn-dl-final blerp-btn-secondary" id="btn-blerp-png" onclick="downloadBlerpPng()">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                    <rect x="3" y="3" width="18" height="18" rx="2"/>
+                                    <circle cx="8.5" cy="8.5" r="1.5"/>
+                                    <path d="M21 15l-5-5L5 21"/>
+                                </svg>
+                                PNG
+                            </button>
+                            <button class="btn-dl-final" id="btn-blerp-gif" onclick="downloadBlerpGif()" style="background:var(--purple-lt);color:white;border:none;">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                    <circle cx="12" cy="12" r="10"/>
+                                    <polygon points="10 8 16 12 10 16 10 8"/>
+                                </svg>
+                                GIF animado
+                            </button>
+                            <button class="btn-dl-final" id="btn-blerp-real-download" onclick="downloadBlerpRealMp3()" style="display:none;background:var(--purple-dk);color:white;border:none;">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                    <path d="M9 18V5l12-2v13"/>
+                                    <circle cx="6" cy="18" r="3"/>
+                                    <circle cx="18" cy="16" r="3"/>
+                                </svg>
+                                MP3 real
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- History Modal -->
+    <div class="modal-overlay" id="history-modal" style="display:none;">
+        <div class="modal-box">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="8" r="4"/>
+                        <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+                    </svg>
+                    Historial de usuarios
+                </div>
+                <button class="modal-close" id="history-close" title="Cerrar">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8">
+                        <path d="M18 6L6 18M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body" id="history-list">
+                <p class="history-empty">No hay usuarios en el historial aún.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Download Modal -->
+    <div class="modal-overlay" id="download-modal" style="display:none;">
+        <div class="modal-box customizer-box">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 20h9"/>
+                        <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+                    </svg>
+                    Personalizar imagen
+                </div>
+                <button class="modal-close" id="download-close" title="Cerrar">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8">
+                        <path d="M18 6L6 18M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="customizer-body" id="download-list">
+                <div class="customizer-controls">
+                    <div class="ctrl-section">
+                        <label class="ctrl-label">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="3"/>
+                                <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+                            </svg>
+                            Color de acento
+                        </label>
+                        <div class="color-swatches" id="color-swatches"></div>
+                        <div class="custom-color-row">
+                            <input type="color" id="custom-color-picker" class="color-picker-input" value="#9146ff">
+                            <span class="custom-color-label">Color personalizado</span>
+                        </div>
+                    </div>
+                    <div class="ctrl-section">
+                        <label class="ctrl-label">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                            </svg>
+                            Estilo de fondo
+                        </label>
+                        <div class="bg-options">
+                            <button class="bg-opt" data-bg="dark">Oscuro</button>
+                            <button class="bg-opt active" id="bg-opt-light" data-bg="light">Claro</button>
+                        </div>
+                    </div>
+                    <div class="ctrl-section">
+                        <div class="date-label-row" style="display:flex;justify-content:space-between;align-items:center;">
+                            <label class="ctrl-label" style="margin-bottom:0;">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="3" width="18" height="18" rx="2"/>
+                                </svg>
+                                Contorno
+                                <span id="border-width-val" style="display:none;opacity:0.7;font-weight:normal;font-size:11px;margin-left:4px;">· 2px</span>
+                            </label>
+                            <label class="toggle-switch" for="border-mode-switch">
+                                <input type="checkbox" id="border-mode-switch">
+                                <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                            </label>
+                        </div>
+                        <div class="slider-row" id="border-width-container" style="display:none;margin-top:12px;">
+                            <span class="slider-lbl-sm" style="font-size:10px;font-weight:900;letter-spacing:-1px;">—</span>
+                            <input type="range" id="border-width-slider" min="1" max="8" value="2" step="1" class="ctrl-slider">
+                            <span class="slider-lbl-lg" style="font-weight:900;letter-spacing:-2px;">━━</span>
+                        </div>
+                    </div>
+                    <div class="ctrl-section">
+                        <label class="ctrl-label">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="4 7 4 4 20 4 20 7"/>
+                                <line x1="9" y1="20" x2="15" y2="20"/>
+                                <line x1="12" y1="4" x2="12" y2="20"/>
+                            </svg>
+                            Tamaño de texto · <span id="font-size-val">16px</span>
+                        </label>
+                        <div class="slider-row">
+                            <span class="slider-lbl-sm">A</span>
+                            <input type="range" id="font-size-slider" min="12" max="26" value="16" step="1" class="ctrl-slider">
+                            <span class="slider-lbl-lg">A</span>
+                        </div>
+                        <div style="margin-top:12px;display:flex;align-items:center;gap:8px;">
+                            <input type="checkbox" id="eh-hide-title" checked style="accent-color:var(--purple-lt);">
+                            <label for="eh-hide-title" style="font-size:.8rem;color:var(--text-lo);cursor:pointer;">Mostrar título del evento</label>
+                        </div>
+                        <div style="margin-top:8px;display:flex;align-items:center;gap:8px;">
+                            <input type="checkbox" id="eh-strip-qs" style="accent-color:var(--purple-lt);">
+                            <label for="eh-strip-qs" style="font-size:.8rem;color:var(--text-lo);cursor:pointer;">Quitar !s</label>
+                        </div>
+                    </div>
+                    <div class="ctrl-section" id="tts-controls-section">
+                        <label class="ctrl-label">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+                                <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+                            </svg>
+                            Audio TTS
+                        </label>
+                        <div style="display:flex;gap:8px;margin-bottom:8px;">
+                            <select id="tts-voice-select" class="field-input" style="height:32px;padding:0 8px;flex:1;"><option value="">Cargando voces...</option></select>
+                        </div>
+                        <div style="display:flex;gap:8px;">
+                            <button id="btn-tts-play" style="flex:1;height:34px;border:1px solid var(--border-color);border-radius:var(--radius-s);background:transparent;color:var(--text-lo);font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;font-family:var(--font);">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                                Escuchar
+                            </button>
+                            <button id="btn-tts-download" style="flex:1;height:34px;border:1px solid var(--border-color);border-radius:var(--radius-s);background:transparent;color:var(--text-lo);font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;font-family:var(--font);">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                Descargar Audio
+                            </button>
+                        </div>
+                        <audio id="tts-audio-player" style="display:none;"></audio>
+                    </div>
+                    <div style="display:flex;gap:12px;margin-top:8px;">
+                        <button class="btn-dl-final" id="btn-dl-final" style="flex:1;margin-top:0;">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                <polyline points="7 10 12 15 17 10"/>
+                                <line x1="12" y1="15" x2="12" y2="3"/>
+                            </svg>
+                            Descargar PNG
+                        </button>
+                        <button class="btn-dl-final" id="btn-dl-video" style="flex:1;margin-top:0;background:var(--purple-lt);color:white;border:none;">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                <circle cx="12" cy="12" r="10"/>
+                                <polygon points="10 8 16 12 10 16 10 8"/>
+                            </svg>
+                            Descargar GIF
+                        </button>
+                    </div>
+                </div>
+                <div class="customizer-preview">
+                    <span class="preview-label">Vista previa</span>
+                    <div class="preview-canvas-wrap">
+                        <canvas id="preview-canvas"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Compression & Firebase SDK -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth-compat.js"></script>
+    <script src="js/firebase.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/gif.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
