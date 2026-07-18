@@ -19,21 +19,52 @@ const auth = firebase.auth();
 
 // --- Saved Logs (Public) ---
 
+// Helper function to fetch ONLY the dates (avoids downloading 25MB of compressed messages)
+async function fetchSavedLogsDates(channel) {
+  const url = `https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/(default)/documents:runQuery`;
+  
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      structuredQuery: {
+        from: [{ collectionId: 'saved_logs' }],
+        where: {
+          fieldFilter: {
+            field: { fieldPath: 'channel' },
+            op: 'EQUAL',
+            value: { stringValue: channel.toLowerCase() }
+          }
+        },
+        select: { fields: [{ fieldPath: 'date' }] } // FIELD MASK
+      }
+    })
+  });
+
+  if (!response.ok) throw new Error('Failed to fetch dates');
+  
+  const results = await response.json();
+  const dates = [];
+  for (const row of results) {
+    if (row.document && row.document.fields && row.document.fields.date) {
+      dates.push(row.document.fields.date.stringValue);
+    }
+  }
+  return dates;
+}
+
 async function getSavedLogsList(channel) {
   try {
-    const snap = await db.collection("saved_logs")
-      .where("channel", "==", channel.toLowerCase())
-      .get();
+    const dates = await fetchSavedLogsDates(channel);
       
     const tree = {};
-    snap.forEach((docSnap) => {
-      const row = docSnap.data();
-      const [year, month, day] = row.date.split('-');
-      if (!year || !month) return;
+    for (const date of dates) {
+      const [year, month, day] = date.split('-');
+      if (!year || !month) continue;
       if (!tree[year]) tree[year] = {};
       if (!tree[year][month]) tree[year][month] = [];
-      if (day) tree[year][month].push(row.date);
-    });
+      if (day) tree[year][month].push(date);
+    }
     
     for (const y in tree) {
       for (const m in tree[y]) {
@@ -111,15 +142,12 @@ async function deleteLogDay(channel, date) {
 
 async function checkCompileStatus(channel, month) {
   try {
-    const snap = await db.collection("saved_logs")
-      .where("channel", "==", channel.toLowerCase())
-      .get();
+    const dates = await fetchSavedLogsDates(channel);
       
     let count = 0;
-    snap.forEach((docSnap) => {
-      const row = docSnap.data();
-      if (row.date.startsWith(month + '-')) count++;
-    });
+    for (const date of dates) {
+      if (date.startsWith(month + '-')) count++;
+    }
     
     if (count === 0) return false;
     
