@@ -173,8 +173,8 @@ async function init() {
   // Apply saved active source
   setSource(_activeSource);
 
-  // Supabase connectivity indicator
-  initSupabaseStatus();
+  // Firebase connectivity indicator
+  initFirebaseStatus();
 }
 
 // ===== Sidebar collapse toggle =====
@@ -240,20 +240,22 @@ function showEmpty() {
   allMessages = []; filteredMessages = [];
 }
 
-// ===== Supabase connectivity status =====
-async function initSupabaseStatus() {
+// ===== Firebase connectivity status =====
+async function initFirebaseStatus() {
   const dot = document.getElementById('server-dot');
   const label = document.getElementById('server-status-label');
+  
   try {
-    // Try a lightweight Supabase query
-    if (typeof getSavedLogsList === 'function') {
-      await getSavedLogsList('_ping_test_');
+    // Try a lightweight Firebase query
+    if (typeof getSearchHistory === 'function') {
+      await getSearchHistory(1);
     }
-    if (dot) { dot.classList.remove('offline'); }
-    if (label) label.textContent = 'Supabase conectado';
+    if (dot) dot.classList.add('online');
+    if (label) label.textContent = 'Firebase conectado';
   } catch (e) {
+    console.error('Firebase connection error:', e);
     if (dot) dot.classList.add('offline');
-    if (label) label.textContent = 'Sin conexión';
+    if (label) label.textContent = 'Firebase sin conexión';
   }
 }
 
