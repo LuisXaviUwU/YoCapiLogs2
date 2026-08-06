@@ -182,8 +182,13 @@
 
     // ── Vista: activar / desactivar ───────────────────────────────
     function showView() {
-        const view = document.getElementById('view-eventhub-web');
-        if (view) view.style.display = 'flex';
+        // Ocultar solo el panel principal de logs (no tocar otros)
+        var logsView = document.getElementById('view-logs');
+        if (logsView) logsView.style.display = 'none';
+
+        var ehView = document.getElementById('view-eventhub-web');
+        if (ehView) ehView.style.display = 'flex';
+
         if (!_initialized) {
             _initialized = true;
             startListening();
@@ -191,8 +196,12 @@
     }
 
     function hideView() {
-        const view = document.getElementById('view-eventhub-web');
-        if (view) view.style.display = 'none';
+        var ehView = document.getElementById('view-eventhub-web');
+        if (ehView) ehView.style.display = 'none';
+
+        // Restaurar el panel principal de logs
+        var logsView = document.getElementById('view-logs');
+        if (logsView) logsView.style.display = 'flex';
     }
 
     // ── Inyectar CSS ──────────────────────────────────────────────
@@ -395,10 +404,6 @@
         `;
 
         btn.addEventListener('click', function () {
-            // Ocultar otras vistas
-            document.querySelectorAll('.view-section, [id^="view-"]').forEach(function(el) {
-                if (el.id !== 'view-eventhub-web') el.style.display = 'none';
-            });
             // Desactivar otros nav-items
             document.querySelectorAll('.nav-item, .nav-sub-item').forEach(function(el) {
                 el.classList.remove('active');
