@@ -254,6 +254,36 @@ async function saveAdminTwitchConfig(clientId, clientSecret) {
   }
 }
 
+// --- Live Events (EventHub en tiempo real) ---
+
+/**
+ * Escucha en tiempo real la colección live_events/{channel}/events.
+ * Devuelve la función unsubscribe para detener la escucha.
+ * @param {string} channel
+ * @param {function} callback - recibe array de eventos ordenados por receivedAt desc
+ */
+function subscribeLiveEvents(channel, callback) {
+  if (!channel) return () => {};
+  try {
+    const colRef = db.collection('live_events')
+      .doc(channel.toLowerCase())
+      .collection('events')
+      .orderBy('receivedAt', 'desc')
+      .limit(100);
+
+    return colRef.onSnapshot(snapshot => {
+      const events = [];
+      snapshot.forEach(doc => events.push(Object.assign({ _id: doc.id }, doc.data())));
+      callback(events);
+    }, err => {
+      console.error('[Firebase] subscribeLiveEvents error:', err.message);
+    });
+  } catch (e) {
+    console.error('[Firebase] subscribeLiveEvents init error:', e.message);
+    return () => {};
+  }
+}
+
 // Expose globally
 window.getSavedLogsList = getSavedLogsList;
 window.getSavedLog = getSavedLog;
@@ -265,4 +295,5 @@ window.upsertSearchHistory = upsertSearchHistory;
 window.getEmoteCache = getEmoteCache;
 window.getAdminTwitchConfig = getAdminTwitchConfig;
 window.saveAdminTwitchConfig = saveAdminTwitchConfig;
+window.subscribeLiveEvents = subscribeLiveEvents;
 window.firebaseAuth = auth;
