@@ -93,7 +93,7 @@
     window.ehWebDownloadEvent = function(id) {
         const event = _eventMap[id];
         if (!event) return;
-        const d = event.data || {};
+        const d = event.data || event;  // Firestore stores flat fields on the doc, no nested .data
         const meta = TYPE_MAP[event.type] || { color: '#888', label: event.type };
 
         let summaryLine = '';
@@ -101,7 +101,7 @@
 
         switch (event.type) {
             case 'channel.follow':
-                summaryLine = 'Sigue a ' + (d.broadcaster_user_name || 'el canal');
+                summaryLine = 'Sigue a ' + (d.broadcaster_user_name || d.data_broadcaster_user_name || 'el canal');
                 break;
             case 'channel.subscribe':
                 summaryLine = 'se suscribió' + (d.tier ? ' (Tier ' + String(d.tier)[0] + ')' : '');
@@ -114,47 +114,49 @@
                 if (d.message && d.message.text) msgBodyLine = d.message.text;
                 break;
             case 'channel.cheer':
-                summaryLine = 'Ha enviado un Cheer de ' + (d.bits || '?') + ' Bits';
-                if (d.message) msgBodyLine = d.message.replace(/\bCheer\d+\b\s*/gi, '').trim();
+                summaryLine = 'Ha enviado un Cheer de ' + (d.bits || d.data_bits || '?') + ' Bits';
+                const _rawCheer = d.message || d.data_message || '';
+                if (_rawCheer) msgBodyLine = _rawCheer.replace(/\bCheer\d+\b\s*/gi, '').trim();
                 break;
             case 'channel.raid':
-                summaryLine = 'hizo un Raid con ' + (d.viewers || 0) + ' espectadores';
+                summaryLine = 'hizo un Raid con ' + (d.viewers || d.data_viewers || 0) + ' espectadores';
                 break;
-            case 'channel.channel_points_custom_reward_redemption.add':
-                let rewardTitle = ((d.reward && d.reward.title) || 'Recompensa');
+            case 'channel.channel_points_custom_reward_redemption.add': {
+                let rewardTitle = (d.reward && d.reward.title) || d.data_reward_title || 'Recompensa';
                 if (rewardTitle.trim().toLowerCase() !== 'speak') summaryLine = rewardTitle;
-                if (d.user_input) msgBodyLine = d.user_input;
+                msgBodyLine = d.user_input || d.data_user_input || '';
                 break;
+            }
             case 'channel.poll.begin':
-                summaryLine = 'Encuesta iniciada: "' + (d.title || '?') + '"';
+                summaryLine = 'Encuesta iniciada: "' + (d.title || d.data_title || '?') + '"';
                 break;
             case 'channel.poll.end':
-                summaryLine = 'Encuesta finalizada: "' + (d.title || '?') + '"';
+                summaryLine = 'Encuesta finalizada: "' + (d.title || d.data_title || '?') + '"';
                 break;
             case 'channel.prediction.begin':
-                summaryLine = 'Predicción iniciada: "' + (d.title || '?') + '"';
+                summaryLine = 'Predicción iniciada: "' + (d.title || d.data_title || '?') + '"';
                 break;
             case 'channel.prediction.lock':
-                summaryLine = 'Predicción bloqueada: "' + (d.title || '?') + '"';
+                summaryLine = 'Predicción bloqueada: "' + (d.title || d.data_title || '?') + '"';
                 break;
             case 'channel.prediction.end':
-                summaryLine = 'Predicción finalizada: "' + (d.title || '?') + '"';
+                summaryLine = 'Predicción finalizada: "' + (d.title || d.data_title || '?') + '"';
                 break;
             case 'channel.hype_train.begin':
-                summaryLine = '¡Tren del Hype comenzó! Nivel ' + (d.level || 1);
+                summaryLine = '¡Tren del Hype comenzó! Nivel ' + (d.level || d.data_level || 1);
                 break;
             case 'channel.hype_train.progress':
-                summaryLine = 'Hype Train avanza — Nivel ' + (d.level || '?') + ' (' + (d.total || 0) + ' pts)';
+                summaryLine = 'Hype Train avanza — Nivel ' + (d.level || d.data_level || '?') + ' (' + (d.total || 0) + ' pts)';
                 break;
             case 'channel.hype_train.end':
-                summaryLine = 'Hype Train terminó en Nivel ' + (d.level || '?');
+                summaryLine = 'Hype Train terminó en Nivel ' + (d.level || d.data_level || '?');
                 break;
             case 'channel.ban':
-                summaryLine = 'fue baneado por ' + (d.moderator_user_name || 'un mod');
-                if (d.reason) msgBodyLine = d.reason;
+                summaryLine = 'fue baneado por ' + (d.moderator_user_name || d.data_moderator_user_name || 'un mod');
+                if (d.reason || d.data_reason) msgBodyLine = d.reason || d.data_reason;
                 break;
             case 'channel.unban':
-                summaryLine = 'fue desbaneado por ' + (d.moderator_user_name || 'un mod');
+                summaryLine = 'fue desbaneado por ' + (d.moderator_user_name || d.data_moderator_user_name || 'un mod');
                 break;
             case 'channel.moderator.add':
                 summaryLine = 'es ahora Moderador';
@@ -162,18 +164,20 @@
             case 'channel.moderator.remove':
                 summaryLine = 'dejó de ser Moderador';
                 break;
-            case 'stream.streak':
-                summaryLine = 'Has logrado una racha de visualizaciones de ' + (d.count || '?') + ' streams';
-                if (d.streak_text) {
-                    let _stText = d.streak_text.replace(/\u00c2\u00b7/g, '\u00b7');
+            case 'stream.streak': {
+                summaryLine = 'Has logrado una racha de visualizaciones de ' + (d.count || d.data_count || '?') + ' streams';
+                const stRaw = d.streak_text || d.data_streak_text || '';
+                if (stRaw) {
+                    let _stText = stRaw.replace(/\u00c2\u00b7/g, '\u00b7');
                     let _sep = _stText.indexOf('·');
                     if (_sep === -1) _sep = _stText.indexOf('\u00b7');
                     let _extra = _sep !== -1 ? _stText.slice(_sep + 1).trim() : _stText;
                     if (_extra) msgBodyLine = _extra;
                 }
                 break;
+            }
             case 'user.mention':
-                summaryLine = 'Ha mencionado a ' + (d.mentioned_user || 'alguien');
+                summaryLine = 'Ha mencionado a ' + (d.mentioned_user || d.data_mentioned_user || 'alguien');
                 break;
             case 'channel.chat.notification':
                 summaryLine = (d.notice_type === 'announcement' ? 'hizo un anuncio' : d.notice_type === 'mention' ? 'te mencionó' : 'envió una notificación');
@@ -193,9 +197,10 @@
         }
 
         const fullText = summaryLine ? (summaryLine + (msgBodyLine ? '\n' + msgBodyLine : '')) : msgBodyLine;
-        const cardDisplayName = d.user_name || d.from_broadcaster_user_name ||
+        const cardDisplayName = d.user_name || d.data_user_name || d.from_broadcaster_user_name || d.data_from_broadcaster_user_name ||
             d.chatter_user_name || d.to_broadcaster_user_name || 'Twitch';
-        const userLogin = d.user_login || d.from_broadcaster_user_login || d.chatter_user_login || d.to_broadcaster_user_login || cardDisplayName;
+        const userLogin = d.user_login || d.data_user_login || d.from_broadcaster_user_login || d.data_from_broadcaster_user_login ||
+            d.chatter_user_login || d.to_broadcaster_user_login || cardDisplayName;
 
         let emoteTagParts = [];
         let explicitEmotes = null;
@@ -351,7 +356,7 @@
                 </div>
             </div>
             <div class="eh-web-card-actions">
-                <button class="eh-web-btn-dl" onclick="ehWebDownloadEvent('${escHtml(ev.id)}')" title="Descargar como imagen">
+                <button class="eh-web-btn-dl" data-event-id="${escHtml(ev.id)}" title="Descargar como imagen">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                 </button>
             </div>
@@ -376,6 +381,19 @@
         if (counter) counter.textContent = events.length + ' evento' + (events.length !== 1 ? 's' : '');
 
         list.innerHTML = events.map(renderEvent).join('');
+
+        // Attach download button listeners (avoids inline onclick issues with special chars in IDs)
+        list.querySelectorAll('.eh-web-btn-dl[data-event-id]').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                const id = btn.getAttribute('data-event-id');
+                const event = _eventMap[id];
+                if (!event) {
+                    console.warn('[EventHub] evento no encontrado para id:', id, 'eventMap keys:', Object.keys(_eventMap).slice(0,5));
+                    return;
+                }
+                ehWebDownloadEvent(id);
+            });
+        });
     }
 
     // ── Suscripción ───────────────────────────────────────────────

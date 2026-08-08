@@ -273,7 +273,10 @@ function subscribeLiveEvents(channel, callback) {
 
     return colRef.onSnapshot(snapshot => {
       const events = [];
-      snapshot.forEach(doc => events.push(Object.assign({ _id: doc.id }, doc.data())));
+      snapshot.forEach(doc => {
+        const ev = Object.assign({}, doc.data(), { id: doc.id });
+        events.push(ev);
+      });
       callback(events);
     }, err => {
       console.error('[Firebase] subscribeLiveEvents error:', err.message);
