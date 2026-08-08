@@ -1032,6 +1032,7 @@ async function downloadMessageCard(msg, color) {
   const wrap = document.querySelector('.preview-canvas-wrap');
   if (wrap) wrap.innerHTML = '<div class="customizer-loading"><div class="loading-spinner"></div><span>Cargando...</span></div>';
   if (downloadModal) downloadModal.style.display = 'flex';
+  _custEventHubAvatar = null;
   if (msg.avatarUrl) _custEventHubAvatar = await loadImage(msg.avatarUrl);
   _custBadgeImages = [];
   if (msg.tags?.badges) {
@@ -1138,8 +1139,10 @@ function renderCustomizerCanvas(timeMs = 0, targetCanvas = null) {
   const LINE_HEIGHT = 1.5;
   const mc = document.createElement('canvas').getContext('2d');
   mc.font = `800 ${HEADER_FONT}px Inter, sans-serif`;
+  const avatarSize = _custEventHubAvatar ? BADGE_SIZE * 1.5 : 0;
+  const avatarW = _custEventHubAvatar ? avatarSize + BADGE_GAP : 0;
   const badgesW = _custBadgeImages.reduce((sum, b) => b.img ? sum + BADGE_SIZE + BADGE_GAP : sum, 0);
-  const headerContentW = badgesW + mc.measureText(_custMsg.displayName).width;
+  const headerContentW = avatarW + badgesW + mc.measureText(_custMsg.displayName).width;
   const headerW = headerContentW + HEADER_PAD_H * 2;
   const headerH = Math.max(BADGE_SIZE, HEADER_FONT) + HEADER_PAD_V * 2;
   mc.font = `700 ${FONT_SIZE}px Inter, sans-serif`;
@@ -1275,10 +1278,10 @@ function renderCustomizerCanvas(timeMs = 0, targetCanvas = null) {
   let hx = headerX + HEADER_PAD_H;
   const hcy = headerY + headerH / 2;
   if (_custEventHubAvatar) {
-    const avatarSize = BADGE_SIZE * 1.5;
-    ctx.save(); ctx.beginPath(); ctx.arc(hx + avatarSize / 2, hcy, avatarSize / 2, 0, Math.PI * 2); ctx.closePath(); ctx.clip();
-    ctx.drawImage(_custEventHubAvatar, hx, hcy - avatarSize / 2, avatarSize, avatarSize); ctx.restore();
-    hx += avatarSize + BADGE_GAP;
+    const avSize = BADGE_SIZE * 1.5;
+    ctx.save(); ctx.beginPath(); ctx.arc(hx + avSize / 2, hcy, avSize / 2, 0, Math.PI * 2); ctx.closePath(); ctx.clip();
+    ctx.drawImage(_custEventHubAvatar, hx, hcy - avSize / 2, avSize, avSize); ctx.restore();
+    hx += avSize + BADGE_GAP;
   }
   for (const badge of _custBadgeImages) {
     if (badge.img) { try { ctx.drawImage(badge.img, hx, hcy - BADGE_SIZE / 2, BADGE_SIZE, BADGE_SIZE); } catch (e) {} hx += BADGE_SIZE + BADGE_GAP; }
