@@ -24,32 +24,31 @@
     // ── Mapa de tipos ─────────────────────────────────────────────
     const TYPE_MAP = {
         'channel.cheer': {
-            icon: ICONS.bits,
             label: 'Bits',
             color: '#9146ff',
             badge: 'BITS',
             badgeColor: '#9146ff',
             summary: (d) => {
                 const bits = d.bits || d.data_bits || '?';
-                const user = d.user_name || d.data_user_name || 'Anónimo';
-                const msg  = d.message || d.data_message || '';
-                return `<strong>${user}</strong> envió <span class="eh-web-highlight">${bits} bits</span>${msg ? ' · <em>"' + escHtml(msg) + '"</em>' : ''}`;
+                const user = d.is_anonymous ? 'Anónimo' : (d.user_name || d.data_user_name || 'Alguien');
+                const rawMsg = d.message || d.data_message || '';
+                const msg = rawMsg.replace(/\bCheer\d+\b\s*/gi, '').trim();
+                return `<strong>${user}</strong> Ha enviado un Cheer de <strong>${bits} ${bits == 1 ? 'Bit' : 'Bits'}</strong>${msg ? '<br><span class="eh-web-msg">"' + parseEmoteText(msg) + '"</span>' : ''}`;
             }
         },
         'channel.channel_points_custom_reward_redemption.add': {
-            icon: ICONS.speak,
             label: 'Recompensa',
             color: '#00b5ad',
-            badge: 'SPEAK',
+            badge: 'RECOMPENSA',
             badgeColor: '#00b5ad',
             summary: (d) => {
                 const user  = d.user_name || d.data_user_name || 'Alguien';
                 const input = d.user_input || d.data_user_input || '';
-                return `<strong>${user}</strong> usó <span class="eh-web-highlight">Speak</span>${input ? ': <em>"' + escHtml(input) + '"</em>' : ''}`;
+                const rewardTitle = (d.reward && d.reward.title) || (d.data_reward_title) || 'Recompensa';
+                return `<strong>${escHtml(rewardTitle)}</strong> <strong>${user}</strong>${input ? '<br><span class="eh-web-msg">"' + parseEmoteText(input) + '"</span>' : ''}`;
             }
         },
         'stream.streak': {
-            icon: ICONS.streak,
             label: 'Racha',
             color: '#ff6b6b',
             badge: 'RACHA',
@@ -57,8 +56,12 @@
             summary: (d) => {
                 const user  = d.user_name || d.data_user_name || 'Alguien';
                 const count = d.count || d.data_count || '?';
-                const text  = d.streak_text || d.data_streak_text || '';
-                return `<strong>${user}</strong> · <span class="eh-web-highlight">racha de ${count} streams</span>${text ? '<br><em class="eh-web-small">"' + escHtml(text) + '"</em>' : ''}`;
+                let st  = d.streak_text || d.data_streak_text || '';
+                st = st.replace(/\u00c2\u00b7/g, '\u00b7');
+                let sep = st.indexOf('·');
+                if (sep === -1) sep = st.indexOf('\u00b7');
+                const extra = sep !== -1 ? st.slice(sep + 1).trim() : st;
+                return `<strong>${user}</strong> Has logrado una racha de visualizaciones de <strong>${count}</strong> streams${extra ? '<br><span class="eh-web-msg">"' + parseEmoteText(extra) + '"</span>' : ''}`;
             }
         },
     };
@@ -84,6 +87,40 @@
         } catch (_) { return ''; }
     }
 
+    // ── Emotes ────────────────────────────────────────────────────
+    function parseEmoteText(text) {
+        if (!text) return '';
+        const tp = typeof window.thirdPartyEmotes !== 'undefined' ? window.thirdPartyEmotes : {};
+        const twitchIds = typeof window.twitchEmoteIds !== 'undefined' ? window.twitchEmoteIds : {};
+        const tokens = text.split(/(\s+)/);
+        let out = '';
+
+        for (let i = 0; i < tokens.length; i++) {
+            const t = tokens[i];
+            if (/^\s+$/.test(t) || t === '') { out += t; continue; }
+
+            const mentionMatch = t.match(/^(@[\w_]+)$/);
+            if (mentionMatch) {
+                out += '<span style="color:var(--purple-lt, #9146ff);font-weight:600;">' + mentionMatch[1] + '</span>';
+                continue;
+            }
+
+            let url = null;
+            if (tp[t]) {
+                url = typeof tp[t] === 'string' ? tp[t] : tp[t].url;
+            } else if (twitchIds[t]) {
+                url = 'https://static-cdn.jtvnw.net/emoticons/v2/' + twitchIds[t] + '/default/dark/2.0';
+            }
+
+            if (url) {
+                out += '<img src="' + url.replace(/"/g, '&quot;') + '" alt="' + t.replace(/"/g, '&quot;') + '" title="' + t.replace(/"/g, '&quot;') + '" loading="lazy" width="22" height="22" style="vertical-align:middle; display:inline-block;">';
+            } else {
+                out += escHtml(t);
+            }
+        }
+        return out;
+    }
+
     function formatTime(iso) {
         try {
             return new Date(iso).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
@@ -100,15 +137,26 @@
         const time    = formatTime(ev.receivedAt);
         const ago     = timeAgo(ev.receivedAt);
 
+        const userName = d.user_name || d.data_user_name || d.from_broadcaster_user_name || 'A';
+        const initial = userName ? userName[0].toUpperCase() : '?';
+        const avatarUrl = d.profile_image_url || d.data_profile_image_url;
+
+        let avatarHtml = '';
+        if (avatarUrl) {
+            avatarHtml = `<img src="${escHtml(avatarUrl)}" class="eh-web-avatar-img" alt="${escHtml(userName)}" loading="lazy" onerror="this.outerHTML='<div class=\\'eh-web-avatar-fallback\\' style=\\'background:${meta.color}\\'>${initial}</div>'">`;
+        } else {
+            avatarHtml = `<div class="eh-web-avatar-fallback" style="background:${meta.color}">${initial}</div>`;
+        }
+
         return `
-        <div class="eh-web-card" data-type="${escHtml(ev.type)}">
-            <div class="eh-web-card-icon" style="color:${meta.color}; background:${meta.color}18;">
-                ${meta.icon}
+        <div class="eh-web-card" data-type="${escHtml(ev.type)}" style="border-left: 2px solid ${meta.color};">
+            <div class="eh-web-avatar-wrap">
+                ${avatarHtml}
             </div>
             <div class="eh-web-card-body">
                 <div class="eh-web-card-summary">${summary}</div>
                 <div class="eh-web-card-footer">
-                    <span class="eh-web-badge" style="background:${meta.badgeColor}22; color:${meta.badgeColor};">${meta.badge}</span>
+                    <span class="eh-web-badge" style="background:${meta.badgeColor}22; color:${meta.badgeColor}; border: 1px solid ${meta.badgeColor}44;">${meta.badge}</span>
                     <span class="eh-web-time" title="${escHtml(ev.receivedAt || '')}">${time} · ${ago}</span>
                 </div>
             </div>
@@ -312,22 +360,37 @@
     animation: eh-web-fadein .25s ease;
 }
 .eh-web-card:hover {
-    transform: translateX(3px);
     border-color: #3a3a5a;
 }
-.eh-web-card-icon {
-    width: 34px; height: 34px;
-    border-radius: 8px;
-    display: flex; align-items: center; justify-content: center;
+.eh-web-avatar-wrap {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    overflow: hidden;
     flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+}
+.eh-web-avatar-img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+}
+.eh-web-avatar-fallback {
+    width: 100%; height: 100%;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff;
+    font-weight: 700;
+    font-size: 1.1rem;
 }
 .eh-web-card-body { flex: 1; min-width: 0; }
 .eh-web-card-summary {
-    font-size: .88rem;
+    font-size: .9rem;
     color: var(--text-hi, #eee);
     line-height: 1.4;
     margin-bottom: 5px;
     word-break: break-word;
+}
+.eh-web-msg {
+    font-size: 0.88rem;
+    color: var(--text-lo, #888);
 }
 .eh-web-highlight {
     color: var(--purple-lt, #9146ff);
@@ -336,17 +399,18 @@
 .eh-web-small { font-size: .8rem; color: var(--text-lo, #888); }
 .eh-web-card-footer {
     display: flex; align-items: center; gap: 8px;
+    margin-top: 8px;
 }
 .eh-web-badge {
-    font-size: .68rem;
+    font-size: .65rem;
     font-weight: 700;
     letter-spacing: .5px;
-    padding: 1px 7px;
-    border-radius: 20px;
+    padding: 2px 7px;
+    border-radius: 4px;
 }
 .eh-web-time {
-    font-size: .73rem;
-    color: var(--text-lo, #888);
+    font-size: .75rem;
+    color: var(--text-lo, #555);
 }
         `;
         document.head.appendChild(style);
