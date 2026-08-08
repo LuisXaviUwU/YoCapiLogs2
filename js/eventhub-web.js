@@ -93,49 +93,144 @@
     window.ehWebDownloadEvent = function(id) {
         const event = _eventMap[id];
         if (!event) return;
-        const d = event.data || event;
-        const meta = TYPE_MAP[event.type];
-        if (!meta) return;
+        const d = event.data || {};
+        const meta = TYPE_MAP[event.type] || { color: '#888', label: event.type };
 
         let summaryLine = '';
         let msgBodyLine = '';
 
-        if (event.type === 'channel.cheer') {
-            summaryLine = `Ha enviado un Cheer de ${d.bits || d.data_bits || '?'} Bits`;
-            const rawMsg = d.message || d.data_message || '';
-            msgBodyLine = rawMsg.replace(/\bCheer\d+\b\s*/gi, '').trim();
-        } else if (event.type === 'channel.channel_points_custom_reward_redemption.add') {
-            const rewardTitle = (d.reward && d.reward.title) || d.data_reward_title || 'Recompensa';
-            if (rewardTitle.toLowerCase() !== 'speak') summaryLine = rewardTitle;
-            msgBodyLine = d.user_input || d.data_user_input || '';
-        } else if (event.type === 'stream.streak') {
-            summaryLine = `Has logrado una racha de visualizaciones de ${d.count || d.data_count || '?'} streams`;
-            let st = d.streak_text || d.data_streak_text || '';
-            st = st.replace(/\u00c2\u00b7/g, '\u00b7');
-            let sep = st.indexOf('·');
-            if (sep === -1) sep = st.indexOf('\u00b7');
-            msgBodyLine = sep !== -1 ? st.slice(sep + 1).trim() : st;
-        } else {
-            summaryLine = meta.label || 'Evento';
+        switch (event.type) {
+            case 'channel.follow':
+                summaryLine = 'Sigue a ' + (d.broadcaster_user_name || 'el canal');
+                break;
+            case 'channel.subscribe':
+                summaryLine = 'se suscribió' + (d.tier ? ' (Tier ' + String(d.tier)[0] + ')' : '');
+                break;
+            case 'channel.subscription.gift':
+                summaryLine = 'regaló ' + (d.total || 1) + ' sub(s)' + (d.tier ? ' Tier ' + String(d.tier)[0] : '') + (d.recipient_user_name ? ' para ' + d.recipient_user_name : '');
+                break;
+            case 'channel.subscription.message':
+                summaryLine = 'resubscribió (mes ' + (d.cumulative_months || '?') + ')' + (d.streak_months ? ' · racha de ' + d.streak_months + ' meses' : '');
+                if (d.message && d.message.text) msgBodyLine = d.message.text;
+                break;
+            case 'channel.cheer':
+                summaryLine = 'Ha enviado un Cheer de ' + (d.bits || '?') + ' Bits';
+                if (d.message) msgBodyLine = d.message.replace(/\bCheer\d+\b\s*/gi, '').trim();
+                break;
+            case 'channel.raid':
+                summaryLine = 'hizo un Raid con ' + (d.viewers || 0) + ' espectadores';
+                break;
+            case 'channel.channel_points_custom_reward_redemption.add':
+                let rewardTitle = ((d.reward && d.reward.title) || 'Recompensa');
+                if (rewardTitle.trim().toLowerCase() !== 'speak') summaryLine = rewardTitle;
+                if (d.user_input) msgBodyLine = d.user_input;
+                break;
+            case 'channel.poll.begin':
+                summaryLine = 'Encuesta iniciada: "' + (d.title || '?') + '"';
+                break;
+            case 'channel.poll.end':
+                summaryLine = 'Encuesta finalizada: "' + (d.title || '?') + '"';
+                break;
+            case 'channel.prediction.begin':
+                summaryLine = 'Predicción iniciada: "' + (d.title || '?') + '"';
+                break;
+            case 'channel.prediction.lock':
+                summaryLine = 'Predicción bloqueada: "' + (d.title || '?') + '"';
+                break;
+            case 'channel.prediction.end':
+                summaryLine = 'Predicción finalizada: "' + (d.title || '?') + '"';
+                break;
+            case 'channel.hype_train.begin':
+                summaryLine = '¡Tren del Hype comenzó! Nivel ' + (d.level || 1);
+                break;
+            case 'channel.hype_train.progress':
+                summaryLine = 'Hype Train avanza — Nivel ' + (d.level || '?') + ' (' + (d.total || 0) + ' pts)';
+                break;
+            case 'channel.hype_train.end':
+                summaryLine = 'Hype Train terminó en Nivel ' + (d.level || '?');
+                break;
+            case 'channel.ban':
+                summaryLine = 'fue baneado por ' + (d.moderator_user_name || 'un mod');
+                if (d.reason) msgBodyLine = d.reason;
+                break;
+            case 'channel.unban':
+                summaryLine = 'fue desbaneado por ' + (d.moderator_user_name || 'un mod');
+                break;
+            case 'channel.moderator.add':
+                summaryLine = 'es ahora Moderador';
+                break;
+            case 'channel.moderator.remove':
+                summaryLine = 'dejó de ser Moderador';
+                break;
+            case 'stream.streak':
+                summaryLine = 'Has logrado una racha de visualizaciones de ' + (d.count || '?') + ' streams';
+                if (d.streak_text) {
+                    let _stText = d.streak_text.replace(/\u00c2\u00b7/g, '\u00b7');
+                    let _sep = _stText.indexOf('·');
+                    if (_sep === -1) _sep = _stText.indexOf('\u00b7');
+                    let _extra = _sep !== -1 ? _stText.slice(_sep + 1).trim() : _stText;
+                    if (_extra) msgBodyLine = _extra;
+                }
+                break;
+            case 'user.mention':
+                summaryLine = 'Ha mencionado a ' + (d.mentioned_user || 'alguien');
+                break;
+            case 'channel.chat.notification':
+                summaryLine = (d.notice_type === 'announcement' ? 'hizo un anuncio' : d.notice_type === 'mention' ? 'te mencionó' : 'envió una notificación');
+                if (d.message && d.message.text) msgBodyLine = d.message.text;
+                break;
+            case 'channel.shoutout.create':
+                summaryLine = 'recibió un shoutout';
+                break;
+            case 'channel.goal.begin':
+                summaryLine = 'Nueva meta: ' + (d.description || 'Sin descripción') + (d.target_amount ? ' — Objetivo: ' + d.target_amount : '');
+                break;
+            case 'channel.goal.end':
+                summaryLine = 'Meta alcanzada' + (d.description ? ': ' + d.description : '') + (d.target_amount && d.current_amount ? ' — ' + d.current_amount + ' / ' + d.target_amount : '');
+                break;
+            default:
+                summaryLine = meta.label || 'Evento';
         }
 
         const fullText = summaryLine ? (summaryLine + (msgBodyLine ? '\n' + msgBodyLine : '')) : msgBodyLine;
-        const userName = d.user_name || d.data_user_name || d.from_broadcaster_user_name || 'Alguien';
-        const userLogin = d.user_login || d.data_user_login || d.from_broadcaster_user_login || userName;
-        
-        let avatarUrl = d.profile_image_url || d.data_profile_image_url;
+        const cardDisplayName = d.user_name || d.from_broadcaster_user_name ||
+            d.chatter_user_name || d.to_broadcaster_user_name || 'Twitch';
+        const userLogin = d.user_login || d.from_broadcaster_user_login || d.chatter_user_login || d.to_broadcaster_user_login || cardDisplayName;
+
+        let emoteTagParts = [];
+        let explicitEmotes = null;
+        if (event.type === 'channel.subscription.message' && d.message && Array.isArray(d.message.emotes)) {
+            explicitEmotes = d.message.emotes;
+        } else if (event.type === 'channel.chat.notification' && d.message && Array.isArray(d.message.emotes)) {
+            explicitEmotes = d.message.emotes;
+        }
+        if (explicitEmotes && msgBodyLine) {
+            let msgOffset = summaryLine ? summaryLine.length + 1 : 0;
+            let byId = {};
+            for (let emIdx = 0; emIdx < explicitEmotes.length; emIdx++) {
+                let em = explicitEmotes[emIdx];
+                if (!em || !em.id || typeof em.begin !== 'number' || typeof em.end !== 'number') continue;
+                if (!byId[em.id]) byId[em.id] = [];
+                byId[em.id].push((msgOffset + em.begin) + '-' + (msgOffset + em.end));
+            }
+            for (let emoteId in byId) {
+                emoteTagParts.push(emoteId + ':' + byId[emoteId].join(','));
+            }
+        }
+
+        let avatarUrl = d.profile_image_url || null;
         const lowerLogin = String(userLogin).toLowerCase();
         if (!avatarUrl && _avatarCache[lowerLogin] && _avatarCache[lowerLogin] !== 'loading' && _avatarCache[lowerLogin] !== 'failed') {
             avatarUrl = _avatarCache[lowerLogin];
         }
 
         const fakeMsg = {
-            displayName: userName,
+            displayName: cardDisplayName,
             text: fullText,
             tags: {
                 color: meta.color,
                 badges: 'eventhub:1',
-                emotes: ''
+                emotes: emoteTagParts.join('/')
             },
             avatarUrl: avatarUrl || null
         };
