@@ -87,7 +87,97 @@
         } catch (_) { return ''; }
     }
 
-    // ── Emotes ────────────────────────────────────────────────────
+    // ── Global map for downloading events ─────────────────────────
+    const _eventMap = {};
+
+    window.ehWebDownloadEvent = function(id) {
+        const event = _eventMap[id];
+        if (!event) return;
+        const d = event.data || event;
+        const meta = TYPE_MAP[event.type];
+        if (!meta) return;
+
+        let summaryLine = '';
+        let msgBodyLine = '';
+
+        if (event.type === 'channel.cheer') {
+            summaryLine = `Ha enviado un Cheer de ${d.bits || d.data_bits || '?'} Bits`;
+            const rawMsg = d.message || d.data_message || '';
+            msgBodyLine = rawMsg.replace(/\bCheer\d+\b\s*/gi, '').trim();
+        } else if (event.type === 'channel.channel_points_custom_reward_redemption.add') {
+            const rewardTitle = (d.reward && d.reward.title) || d.data_reward_title || 'Recompensa';
+            if (rewardTitle.toLowerCase() !== 'speak') summaryLine = rewardTitle;
+            msgBodyLine = d.user_input || d.data_user_input || '';
+        } else if (event.type === 'stream.streak') {
+            summaryLine = `Has logrado una racha de visualizaciones de ${d.count || d.data_count || '?'} streams`;
+            let st = d.streak_text || d.data_streak_text || '';
+            st = st.replace(/\u00c2\u00b7/g, '\u00b7');
+            let sep = st.indexOf('·');
+            if (sep === -1) sep = st.indexOf('\u00b7');
+            msgBodyLine = sep !== -1 ? st.slice(sep + 1).trim() : st;
+        } else {
+            summaryLine = meta.label || 'Evento';
+        }
+
+        const fullText = summaryLine ? (summaryLine + (msgBodyLine ? '\n' + msgBodyLine : '')) : msgBodyLine;
+        const userName = d.user_name || d.data_user_name || d.from_broadcaster_user_name || 'Alguien';
+        const userLogin = d.user_login || d.data_user_login || d.from_broadcaster_user_login || userName;
+        
+        let avatarUrl = d.profile_image_url || d.data_profile_image_url;
+        const lowerLogin = String(userLogin).toLowerCase();
+        if (!avatarUrl && _avatarCache[lowerLogin] && _avatarCache[lowerLogin] !== 'loading' && _avatarCache[lowerLogin] !== 'failed') {
+            avatarUrl = _avatarCache[lowerLogin];
+        }
+
+        const fakeMsg = {
+            displayName: userName,
+            text: fullText,
+            tags: {
+                color: meta.color,
+                badges: 'eventhub:1',
+                emotes: ''
+            },
+            avatarUrl: avatarUrl || null
+        };
+        if (window.downloadMessageCard) window.downloadMessageCard(fakeMsg, meta.color);
+    };
+
+    // ── Emotes & Avatars ─────────────────────────────────────────
+    const _avatarCache = {};
+    function fetchAvatar(login, elementId, color, initial, userName) {
+        if (!login) return;
+        const lower = String(login).toLowerCase();
+        
+        const applyAvatar = (url) => {
+            const el = document.getElementById(elementId);
+            if (el) {
+                el.outerHTML = `<img src="${escHtml(url)}" class="eh-web-avatar-img" alt="${escHtml(userName)}" loading="lazy" onerror="this.outerHTML='<div class=\\'eh-web-avatar-fallback\\' style=\\'background:${color}\\'>${initial}</div>'">`;
+            }
+        };
+
+        if (_avatarCache[lower]) {
+            if (_avatarCache[lower] !== 'loading' && _avatarCache[lower] !== 'failed') {
+                setTimeout(() => applyAvatar(_avatarCache[lower]), 0);
+            }
+            return;
+        }
+
+        _avatarCache[lower] = 'loading';
+        fetch('https://api.ivr.fi/v2/twitch/user?login=' + encodeURIComponent(lower))
+            .then(r => r.json())
+            .then(data => {
+                const u = Array.isArray(data) ? data[0] : data;
+                if (u && (u.logo || u.profile_image_url)) {
+                    const url = u.logo || u.profile_image_url;
+                    _avatarCache[lower] = url;
+                    applyAvatar(url);
+                } else {
+                    _avatarCache[lower] = 'failed';
+                }
+            })
+            .catch(() => { _avatarCache[lower] = 'failed'; });
+    }
+
     function parseEmoteText(text) {
         if (!text) return '';
         const tp = typeof window.thirdPartyEmotes !== 'undefined' ? window.thirdPartyEmotes : {};
@@ -138,6 +228,7 @@
         const ago     = timeAgo(ev.receivedAt);
 
         const userName = d.user_name || d.data_user_name || d.from_broadcaster_user_name || 'A';
+        const userLogin = d.user_login || d.data_user_login || d.from_broadcaster_user_login || userName;
         const initial = userName ? userName[0].toUpperCase() : '?';
         const avatarUrl = d.profile_image_url || d.data_profile_image_url;
 
@@ -145,8 +236,12 @@
         if (avatarUrl) {
             avatarHtml = `<img src="${escHtml(avatarUrl)}" class="eh-web-avatar-img" alt="${escHtml(userName)}" loading="lazy" onerror="this.outerHTML='<div class=\\'eh-web-avatar-fallback\\' style=\\'background:${meta.color}\\'>${initial}</div>'">`;
         } else {
-            avatarHtml = `<div class="eh-web-avatar-fallback" style="background:${meta.color}">${initial}</div>`;
+            const fbId = 'eh-av-' + Math.random().toString(36).substr(2, 9);
+            avatarHtml = `<div id="${fbId}" class="eh-web-avatar-fallback" style="background:${meta.color}">${initial}</div>`;
+            fetchAvatar(userLogin, fbId, meta.color, initial, userName);
         }
+
+        _eventMap[ev.id] = ev;
 
         return `
         <div class="eh-web-card" data-type="${escHtml(ev.type)}" style="border-left: 2px solid ${meta.color};">
@@ -159,6 +254,11 @@
                     <span class="eh-web-badge" style="background:${meta.badgeColor}22; color:${meta.badgeColor}; border: 1px solid ${meta.badgeColor}44;">${meta.badge}</span>
                     <span class="eh-web-time" title="${escHtml(ev.receivedAt || '')}">${time} · ${ago}</span>
                 </div>
+            </div>
+            <div class="eh-web-card-actions">
+                <button class="eh-web-btn-dl" onclick="ehWebDownloadEvent('${escHtml(ev.id)}')" title="Descargar como imagen">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                </button>
             </div>
         </div>`;
     }
@@ -411,6 +511,31 @@
 .eh-web-time {
     font-size: .75rem;
     color: var(--text-lo, #555);
+}
+.eh-web-card-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-left: auto;
+    opacity: 0;
+    transition: opacity .2s;
+}
+.eh-web-card:hover .eh-web-card-actions {
+    opacity: 1;
+}
+.eh-web-btn-dl {
+    background: transparent;
+    border: none;
+    color: var(--text-lo, #888);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    display: flex; align-items: center; justify-content: center;
+    transition: color .2s, background .2s;
+}
+.eh-web-btn-dl:hover {
+    color: #fff;
+    background: rgba(255,255,255,0.1);
 }
         `;
         document.head.appendChild(style);
