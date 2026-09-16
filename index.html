@@ -373,114 +373,166 @@
             </div>
             <div class="customizer-body" id="download-list">
                 <div class="customizer-controls">
-                    <div class="ctrl-section">
-                        <label class="ctrl-label">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <circle cx="12" cy="12" r="3"/>
-                                <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
-                            </svg>
-                            Color de acento
-                        </label>
-                        <div class="color-swatches" id="color-swatches"></div>
-                        <div class="custom-color-row">
-                            <input type="color" id="custom-color-picker" class="color-picker-input" value="#9146ff">
-                            <span class="custom-color-label">Color personalizado</span>
-                        </div>
-                    </div>
-                    <div class="ctrl-section">
-                        <label class="ctrl-label">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-                            </svg>
-                            Estilo de fondo
-                        </label>
-                        <div class="bg-options">
-                            <button class="bg-opt" data-bg="dark">Oscuro</button>
-                            <button class="bg-opt active" id="bg-opt-light" data-bg="light">Claro</button>
-                        </div>
-                    </div>
-                    <div class="ctrl-section">
-                        <div class="date-label-row" style="display:flex;justify-content:space-between;align-items:center;">
-                            <label class="ctrl-label" style="margin-bottom:0;">
+                    <div class="customizer-controls-scroll">
+                    <details class="customizer-accordion" open>
+                        <summary class="accordion-header">
+                            <span class="accordion-title">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <rect x="3" y="3" width="18" height="18" rx="2"/>
+                                    <circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
                                 </svg>
-                                Contorno
-                                <span id="border-width-val" style="display:none;opacity:0.7;font-weight:normal;font-size:11px;margin-left:4px;">· 2px</span>
-                            </label>
-                            <label class="toggle-switch" for="border-mode-switch">
-                                <input type="checkbox" id="border-mode-switch">
-                                <span class="toggle-track"><span class="toggle-thumb"></span></span>
-                            </label>
+                                Colores y Fondo
+                            </span>
+                            <svg class="accordion-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                        </summary>
+                        <div class="accordion-content">
+                            <div class="ctrl-section">
+                                <label class="ctrl-label">Color de acento</label>
+                                <div class="color-swatches" id="color-swatches"></div>
+                                <div class="custom-color-row">
+                                    <input type="color" id="custom-color-picker" class="color-picker-input" value="#9146ff">
+                                    <span class="custom-color-label">Color personalizado</span>
+                                </div>
+                            </div>
+                            <div class="ctrl-section">
+                                <label class="ctrl-label">Estilo de fondo</label>
+                                <div class="bg-options">
+                                    <button class="bg-opt" data-bg="dark">Oscuro</button>
+                                    <button class="bg-opt active" id="bg-opt-light" data-bg="light">Claro</button>
+                                </div>
+                            </div>
                         </div>
-                        <div class="slider-row" id="border-width-container" style="display:none;margin-top:12px;">
-                            <span class="slider-lbl-sm" style="font-size:10px;font-weight:900;letter-spacing:-1px;">—</span>
-                            <input type="range" id="border-width-slider" min="1" max="8" value="2" step="1" class="ctrl-slider">
-                            <span class="slider-lbl-lg" style="font-weight:900;letter-spacing:-2px;">━━</span>
+                    </details>
+
+                    <details class="customizer-accordion">
+                        <summary class="accordion-header">
+                            <span class="accordion-title">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
+                                Estilos y Formas
+                            </span>
+                            <svg class="accordion-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                        </summary>
+                        <div class="accordion-content">
+                            <div class="ctrl-section">
+                                <div class="date-label-row" style="display:flex;justify-content:space-between;align-items:center;">
+                                    <label class="ctrl-label" style="margin-bottom:0;">Decoración Capibara</label>
+                                    <label class="toggle-switch" for="capibara-mode-switch">
+                                        <input type="checkbox" id="capibara-mode-switch">
+                                        <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="ctrl-section">
+                                <div class="date-label-row" style="display:flex;justify-content:space-between;align-items:center;">
+                                    <label class="ctrl-label" style="margin-bottom:0;">
+                                        Contorno
+                                        <span id="border-width-val" style="display:none;opacity:0.7;font-weight:normal;font-size:11px;margin-left:4px;">· 2px</span>
+                                    </label>
+                                    <label class="toggle-switch" for="border-mode-switch">
+                                        <input type="checkbox" id="border-mode-switch">
+                                        <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                                    </label>
+                                </div>
+                                <div class="slider-row" id="border-width-container" style="display:none;margin-top:12px;">
+                                    <span class="slider-lbl-sm" style="font-size:10px;font-weight:900;letter-spacing:-1px;">—</span>
+                                    <input type="range" id="border-width-slider" min="1" max="8" value="2" step="1" class="ctrl-slider">
+                                    <span class="slider-lbl-lg" style="font-weight:900;letter-spacing:-2px;">━━</span>
+                                </div>
+                            </div>
+                            <div class="ctrl-section">
+                                <div class="date-label-row" style="display:flex;justify-content:space-between;align-items:center;">
+                                    <label class="ctrl-label" style="margin-bottom:0;">Relieve 3D</label>
+                                    <label class="toggle-switch" for="relief-mode-switch">
+                                        <input type="checkbox" id="relief-mode-switch">
+                                        <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                                    </label>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                    <div class="ctrl-section">
-                        <label class="ctrl-label">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <polyline points="4 7 4 4 20 4 20 7"/>
-                                <line x1="9" y1="20" x2="15" y2="20"/>
-                                <line x1="12" y1="4" x2="12" y2="20"/>
-                            </svg>
-                            Tamaño de texto · <span id="font-size-val">16px</span>
-                        </label>
-                        <div class="slider-row">
-                            <span class="slider-lbl-sm">A</span>
-                            <input type="range" id="font-size-slider" min="12" max="26" value="16" step="1" class="ctrl-slider">
-                            <span class="slider-lbl-lg">A</span>
+                    </details>
+
+                    <details class="customizer-accordion">
+                        <summary class="accordion-header">
+                            <span class="accordion-title">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
+                                Texto
+                            </span>
+                            <svg class="accordion-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                        </summary>
+                        <div class="accordion-content">
+                            <div class="ctrl-section">
+                                <label class="ctrl-label">Tipografía</label>
+                                <select id="font-family-select" class="field-input" style="height:32px;padding:0 8px;width:100%;">
+                                    <option value="Inter">Inter (Moderna)</option>
+                                    <option value="Fredoka">Fredoka (Redondeada)</option>
+                                    <option value="JetBrains Mono">JetBrains Mono (Código)</option>
+                                </select>
+                            </div>
+                            <div class="ctrl-section">
+                                <label class="ctrl-label">Tamaño de texto · <span id="font-size-val">16px</span></label>
+                                <div class="slider-row">
+                                    <span class="slider-lbl-sm">A</span>
+                                    <input type="range" id="font-size-slider" min="12" max="26" value="16" step="1" class="ctrl-slider">
+                                    <span class="slider-lbl-lg">A</span>
+                                </div>
+                                <div style="margin-top:12px;display:flex;align-items:center;gap:8px;">
+                                    <input type="checkbox" id="eh-hide-title" checked style="accent-color:var(--purple-lt);">
+                                    <label for="eh-hide-title" style="font-size:.8rem;color:var(--text-lo);cursor:pointer;">Mostrar título del evento</label>
+                                </div>
+                                <div style="margin-top:8px;display:flex;align-items:center;gap:8px;">
+                                    <input type="checkbox" id="eh-strip-qs" style="accent-color:var(--purple-lt);">
+                                    <label for="eh-strip-qs" style="font-size:.8rem;color:var(--text-lo);cursor:pointer;">Quitar !s</label>
+                                </div>
+                            </div>
                         </div>
-                        <div style="margin-top:12px;display:flex;align-items:center;gap:8px;">
-                            <input type="checkbox" id="eh-hide-title" checked style="accent-color:var(--purple-lt);">
-                            <label for="eh-hide-title" style="font-size:.8rem;color:var(--text-lo);cursor:pointer;">Mostrar título del evento</label>
+                    </details>
+
+                    <details class="customizer-accordion">
+                        <summary class="accordion-header">
+                            <span class="accordion-title">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+                                Audio TTS
+                            </span>
+                            <svg class="accordion-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                        </summary>
+                        <div class="accordion-content">
+                            <div class="ctrl-section" id="tts-controls-section" style="margin-bottom:0;">
+                                <div style="display:flex;gap:8px;margin-bottom:8px;">
+                                    <select id="tts-voice-select" class="field-input" style="height:32px;padding:0 8px;flex:1;"><option value="">Cargando voces...</option></select>
+                                </div>
+                                <div style="display:flex;gap:8px;">
+                                    <button id="btn-tts-play" style="flex:1;height:34px;border:1px solid var(--border-color);border-radius:var(--radius-s);background:transparent;color:var(--text-lo);font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;font-family:var(--font);">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                                        Escuchar
+                                    </button>
+                                    <button id="btn-tts-download" style="flex:1;height:34px;border:1px solid var(--border-color);border-radius:var(--radius-s);background:transparent;color:var(--text-lo);font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;font-family:var(--font);">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                        Descargar
+                                    </button>
+                                </div>
+                                <audio id="tts-audio-player" style="display:none;"></audio>
+                            </div>
                         </div>
-                        <div style="margin-top:8px;display:flex;align-items:center;gap:8px;">
-                            <input type="checkbox" id="eh-strip-qs" style="accent-color:var(--purple-lt);">
-                            <label for="eh-strip-qs" style="font-size:.8rem;color:var(--text-lo);cursor:pointer;">Quitar !s</label>
-                        </div>
-                    </div>
-                    <div class="ctrl-section" id="tts-controls-section">
-                        <label class="ctrl-label">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
-                                <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
-                            </svg>
-                            Audio TTS
-                        </label>
-                        <div style="display:flex;gap:8px;margin-bottom:8px;">
-                            <select id="tts-voice-select" class="field-input" style="height:32px;padding:0 8px;flex:1;"><option value="">Cargando voces...</option></select>
-                        </div>
-                        <div style="display:flex;gap:8px;">
-                            <button id="btn-tts-play" style="flex:1;height:34px;border:1px solid var(--border-color);border-radius:var(--radius-s);background:transparent;color:var(--text-lo);font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;font-family:var(--font);">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                                Escuchar
+                    </details>
+                    </div><!-- end customizer-controls-scroll -->
+
+                    <div class="customizer-controls-footer">
+                        <div style="display:flex;gap:10px;">
+                            <button class="btn-dl-final" id="btn-dl-final" style="flex:1;margin-top:0;">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                    <polyline points="7 10 12 15 17 10"/>
+                                    <line x1="12" y1="15" x2="12" y2="3"/>
+                                </svg>
+                                Descargar PNG
                             </button>
-                            <button id="btn-tts-download" style="flex:1;height:34px;border:1px solid var(--border-color);border-radius:var(--radius-s);background:transparent;color:var(--text-lo);font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;font-family:var(--font);">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                                Descargar Audio
+                            <button class="btn-dl-final" id="btn-dl-video" style="flex:1;margin-top:0;background:var(--purple-lt);color:white;border:none;">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                    <circle cx="12" cy="12" r="10"/>
+                                    <polygon points="10 8 16 12 10 16 10 8"/>
+                                </svg>
+                                Descargar GIF
                             </button>
                         </div>
-                        <audio id="tts-audio-player" style="display:none;"></audio>
-                    </div>
-                    <div style="display:flex;gap:12px;margin-top:8px;">
-                        <button class="btn-dl-final" id="btn-dl-final" style="flex:1;margin-top:0;">
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                                <polyline points="7 10 12 15 17 10"/>
-                                <line x1="12" y1="15" x2="12" y2="3"/>
-                            </svg>
-                            Descargar PNG
-                        </button>
-                        <button class="btn-dl-final" id="btn-dl-video" style="flex:1;margin-top:0;background:var(--purple-lt);color:white;border:none;">
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                                <circle cx="12" cy="12" r="10"/>
-                                <polygon points="10 8 16 12 10 16 10 8"/>
-                            </svg>
-                            Descargar GIF
-                        </button>
                     </div>
                 </div>
                 <div class="customizer-preview">
