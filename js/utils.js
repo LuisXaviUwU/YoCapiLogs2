@@ -78,7 +78,7 @@ function loadImage(url) {
   if (_imgCache.has(url)) return Promise.resolve(_imgCache.get(url));
   return new Promise(resolve => {
     const img = new Image();
-    img.crossOrigin = 'anonymous';
+    if (url.startsWith('http')) img.crossOrigin = 'anonymous';
     img.onload = () => { _imgCache.set(url, img); resolve(img); };
     img.onerror = () => resolve(null);
     img.src = url;

@@ -73,7 +73,8 @@ let _custTimer = null;
 let _custAnimRaf = null;
 let _custAnimStart = null;
 let _custEventHubAvatar = null;
-let _custSettings = { accentColor: '#9146ff', bgStyle: 'light', fontSize: 16, showBorder: false, borderWidth: 2 };
+let _custSettings = { accentColor: '#9146ff', bgStyle: 'light', fontSize: 16, showBorder: false, borderWidth: 2, relief3D: false, showCapibara: false, fontFamily: 'Inter' };
+let _custCapibaraImage = null;
 let _isRecording = false;
 
 // Blerp state
@@ -555,44 +556,45 @@ function createMessageRow(msg, date, isGrouped = false) {
   const row = document.createElement('div');
   row.className = 'msg-row';
   if (isGrouped) row.classList.add('is-grouped');
-  const timeStr = date.toLocaleString('es-MX', {
-    year: 'numeric', month: '2-digit', day: '2-digit',
-    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
-  });
+
   const badgesEl = buildBadgesEl(msg.tags);
   const color = sanitizeColor(msg.tags?.color);
   const filterVal = filterInput ? filterInput.value.trim() : '';
   const bodyEl = buildMessageBody(msg, filterVal);
-  const timeEl = document.createElement('span');
-  timeEl.className = 'msg-time';
-  timeEl.textContent = timeStr;
+  
   const metaEl = document.createElement('span');
   metaEl.className = 'msg-meta';
+  
   const userEl = document.createElement('span');
   userEl.className = 'msg-user';
   userEl.style.color = color;
   userEl.innerHTML = filterVal ? highlightText(escapeHtml(msg.displayName), filterVal) : escapeHtml(msg.displayName);
+  
   const colonEl = document.createElement('span');
   colonEl.className = 'msg-colon';
   colonEl.textContent = ':';
+  
   const dlBtn = document.createElement('button');
   dlBtn.className = 'msg-download-btn';
   dlBtn.title = 'Descargar mensaje como imagen';
   dlBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>';
   dlBtn.onclick = () => downloadMessageCard(msg, color);
+  
   const blerpBtn = document.createElement('button');
   blerpBtn.className = 'msg-download-btn msg-blerp-btn';
   blerpBtn.title = 'Ver como overlay Blerp';
   blerpBtn.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>';
   blerpBtn.onclick = () => openBlerpCard(msg);
+  
   metaEl.appendChild(badgesEl);
   metaEl.appendChild(userEl);
   metaEl.appendChild(colonEl);
-  row.appendChild(timeEl);
+  
   row.appendChild(metaEl);
   row.appendChild(bodyEl);
   row.appendChild(blerpBtn);
   row.appendChild(dlBtn);
+  
   return row;
 }
 
@@ -778,6 +780,27 @@ function initCustomizer() {
       _custSettings.showBorder = e.target.checked;
       if (borderContainer) borderContainer.style.display = e.target.checked ? 'flex' : 'none';
       if (borderVal) borderVal.style.display = e.target.checked ? 'inline' : 'none';
+      scheduleRender();
+    });
+  }
+  const reliefSwitch = document.getElementById('relief-mode-switch');
+  if (reliefSwitch) {
+    reliefSwitch.addEventListener('change', e => {
+      _custSettings.relief3D = e.target.checked;
+      scheduleRender();
+    });
+  }
+  const capibaraSwitch = document.getElementById('capibara-mode-switch');
+  if (capibaraSwitch) {
+    capibaraSwitch.addEventListener('change', e => {
+      _custSettings.showCapibara = e.target.checked;
+      scheduleRender();
+    });
+  }
+  const fontSelect = document.getElementById('font-family-select');
+  if (fontSelect) {
+    fontSelect.addEventListener('change', e => {
+      _custSettings.fontFamily = e.target.value;
       scheduleRender();
     });
   }
@@ -1006,6 +1029,13 @@ async function downloadMessageCard(msg, color) {
   _custSettings.fontSize = 16;
   _custSettings.showBorder = false;
   _custSettings.borderWidth = 2;
+  _custSettings.relief3D = false;
+  _custSettings.showCapibara = false;
+  _custSettings.fontFamily = 'Inter';
+  
+  if (!_custCapibaraImage) {
+    _custCapibaraImage = await loadImage('img/cards/capibara.png').catch(() => null);
+  }
   const picker = document.getElementById('custom-color-picker');
   if (picker) picker.value = userColor;
   const slider = document.getElementById('font-size-slider');
@@ -1014,6 +1044,12 @@ async function downloadMessageCard(msg, color) {
   if (sizeVal) sizeVal.textContent = '16px';
   const borderSwitch = document.getElementById('border-mode-switch');
   if (borderSwitch) borderSwitch.checked = false;
+  const reliefSwitch2 = document.getElementById('relief-mode-switch');
+  if (reliefSwitch2) reliefSwitch2.checked = false;
+  const capibaraSwitch2 = document.getElementById('capibara-mode-switch');
+  if (capibaraSwitch2) capibaraSwitch2.checked = false;
+  const fontSelect2 = document.getElementById('font-family-select');
+  if (fontSelect2) fontSelect2.value = 'Inter';
   const borderContainer = document.getElementById('border-width-container');
   if (borderContainer) borderContainer.style.display = 'none';
   const borderVal = document.getElementById('border-width-val');
@@ -1114,7 +1150,7 @@ async function downloadMessageCard(msg, color) {
 function renderCustomizerCanvas(timeMs = 0, targetCanvas = null) {
   const canvas = targetCanvas || document.getElementById('preview-canvas');
   if (!canvas || !_custMsg) return;
-  const { accentColor, bgStyle, fontSize, showBorder, borderWidth } = _custSettings;
+  const { accentColor, bgStyle, fontSize, showBorder, borderWidth, showCapibara, fontFamily } = _custSettings;
   let headerBg, headerText, bodyBg, bodyText, bodyBorder, headerBorder;
   if (bgStyle === 'light') { headerBg = accentColor; headerText = '#ffffff'; bodyBg = '#ffffff'; bodyText = '#111111'; }
   else { headerBg = accentColor; headerText = '#ffffff'; bodyBg = '#1e1e24'; bodyText = '#f2f2ff'; }
@@ -1138,14 +1174,14 @@ function renderCustomizerCanvas(timeMs = 0, targetCanvas = null) {
   const HEADER_LEFT_MG = 20 * DPR;
   const LINE_HEIGHT = 1.5;
   const mc = document.createElement('canvas').getContext('2d');
-  mc.font = `800 ${HEADER_FONT}px Inter, sans-serif`;
+  mc.font = `800 ${HEADER_FONT}px "${fontFamily}", sans-serif`;
   const avatarSize = _custEventHubAvatar ? BADGE_SIZE * 1.5 : 0;
   const avatarW = _custEventHubAvatar ? avatarSize + BADGE_GAP : 0;
   const badgesW = _custBadgeImages.reduce((sum, b) => b.img ? sum + BADGE_SIZE + BADGE_GAP : sum, 0);
   const headerContentW = avatarW + badgesW + mc.measureText(_custMsg.displayName).width;
   const headerW = headerContentW + HEADER_PAD_H * 2;
   const headerH = Math.max(BADGE_SIZE, HEADER_FONT) + HEADER_PAD_V * 2;
-  mc.font = `700 ${FONT_SIZE}px Inter, sans-serif`;
+  mc.font = `700 ${FONT_SIZE}px "${fontFamily}", sans-serif`;
   const bodyContentW = MAX_BODY_W - BODY_PAD * 2;
   let renderSegs = _custSegments;
   const showTitle = document.getElementById('eh-hide-title')?.checked;
@@ -1226,8 +1262,13 @@ function renderCustomizerCanvas(timeMs = 0, targetCanvas = null) {
   const { lines, lineH } = wrapSegs(renderSegs);
   const bodyInnerH = lines.length * lineH + BODY_PAD_TOP + BODY_PAD;
   const bodyW = MAX_BODY_W;
-  let totalW = Math.ceil(Math.max(bodyW, HEADER_LEFT_MG + headerW) + PADDING * 2);
-  let totalH = Math.ceil(PADDING + headerH - HEADER_OVERLAP + bodyInnerH + PADDING);
+  const reliefOffsetX = _custSettings.relief3D ? 8 * DPR : 0;
+  const reliefOffsetY = _custSettings.relief3D ? 8 * DPR : 0;
+  // Reserve space above the body card for the capybara
+  const CAP_H_PX = 50; // height in logical pixels
+  const capibaraH = (showCapibara && _custCapibaraImage) ? (CAP_H_PX - 4) * DPR : 0; // 4px overlap
+  let totalW = Math.ceil(Math.max(bodyW, HEADER_LEFT_MG + headerW) + PADDING * 2 + reliefOffsetX);
+  let totalH = Math.ceil(capibaraH + PADDING + headerH - HEADER_OVERLAP + bodyInnerH + PADDING + reliefOffsetY);
   if (totalW % 2 !== 0) totalW += 1;
   if (totalH % 2 !== 0) totalH += 1;
   if (canvas.width !== totalW) canvas.width = totalW;
@@ -1235,7 +1276,9 @@ function renderCustomizerCanvas(timeMs = 0, targetCanvas = null) {
   const ctx = canvas.getContext('2d');
   ctx.clearRect(0, 0, totalW, totalH);
   const bodyX = PADDING;
-  const bodyY = PADDING + headerH - HEADER_OVERLAP;
+  const bodyY = capibaraH + PADDING + headerH - HEADER_OVERLAP;
+  const headerX = bodyX + HEADER_LEFT_MG;
+  const headerY = capibaraH + PADDING;
   function roundRect(cx, x, y, w, h, r) {
     cx.beginPath();
     cx.moveTo(x + r, y); cx.lineTo(x + w - r, y); cx.quadraticCurveTo(x + w, y, x + w, y + r);
@@ -1243,9 +1286,20 @@ function renderCustomizerCanvas(timeMs = 0, targetCanvas = null) {
     cx.lineTo(x + r, y + h); cx.quadraticCurveTo(x, y + h, x, y + h - r);
     cx.lineTo(x, y + r); cx.quadraticCurveTo(x, y, x + r, y); cx.closePath();
   }
+
+  if (_custSettings.relief3D) {
+    ctx.save();
+    ctx.fillStyle = accentColor;
+    // Draw relief for body
+    roundRect(ctx, bodyX + reliefOffsetX, bodyY + reliefOffsetY, bodyW, bodyInnerH, BODY_RADIUS);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // Draw main body
   ctx.save(); roundRect(ctx, bodyX, bodyY, bodyW, bodyInnerH, BODY_RADIUS); ctx.fillStyle = bodyBg; ctx.fill(); ctx.restore();
   if (bodyBorder) { ctx.save(); roundRect(ctx, bodyX, bodyY, bodyW, bodyInnerH, BODY_RADIUS); ctx.strokeStyle = bodyBorder; ctx.lineWidth = borderWidth * DPR; ctx.stroke(); ctx.restore(); }
-  ctx.font = `700 ${FONT_SIZE}px Inter, sans-serif`;
+  ctx.font = `700 ${FONT_SIZE}px "${fontFamily}", sans-serif`;
   ctx.fillStyle = bodyText; ctx.textBaseline = 'middle';
   let drawY = bodyY + BODY_PAD_TOP;
   for (const ln of lines) {
@@ -1271,8 +1325,16 @@ function renderCustomizerCanvas(timeMs = 0, targetCanvas = null) {
     }
     drawY += lineH;
   }
-  const headerX = bodyX + HEADER_LEFT_MG;
-  const headerY = PADDING;
+  if (showCapibara && _custCapibaraImage) {
+    const capH = CAP_H_PX * DPR;
+    const capAspect = _custCapibaraImage.naturalWidth / _custCapibaraImage.naturalHeight;
+    const capW = capH * (capAspect || 1);
+    // Sit on the top-right edge of the body card, overlapping slightly so hands rest on the border
+    const capX = bodyX + bodyW - capW - 12 * DPR;
+    const capY = bodyY - capH + 4 * DPR;
+    ctx.drawImage(_custCapibaraImage, capX, capY, capW, capH);
+  }
+
   ctx.save(); roundRect(ctx, headerX, headerY, headerW, headerH, HEADER_RADIUS); ctx.fillStyle = headerBg; ctx.fill(); ctx.restore();
   if (headerBorder) { ctx.save(); roundRect(ctx, headerX, headerY, headerW, headerH, HEADER_RADIUS); ctx.strokeStyle = headerBorder; ctx.lineWidth = borderWidth * DPR; ctx.stroke(); ctx.restore(); }
   let hx = headerX + HEADER_PAD_H;
@@ -1286,7 +1348,7 @@ function renderCustomizerCanvas(timeMs = 0, targetCanvas = null) {
   for (const badge of _custBadgeImages) {
     if (badge.img) { try { ctx.drawImage(badge.img, hx, hcy - BADGE_SIZE / 2, BADGE_SIZE, BADGE_SIZE); } catch (e) {} hx += BADGE_SIZE + BADGE_GAP; }
   }
-  ctx.font = `800 ${HEADER_FONT}px Inter, sans-serif`;
+  ctx.font = `800 ${HEADER_FONT}px "${fontFamily}", sans-serif`;
   ctx.fillStyle = headerText; ctx.textBaseline = 'middle';
   ctx.fillText(_custMsg.displayName, hx, hcy);
 }
