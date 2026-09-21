@@ -430,41 +430,62 @@ function createMessageRow(msg, date, isGrouped = false) {
   const row = document.createElement('div');
   row.className = 'msg-row';
   if (isGrouped) row.classList.add('is-grouped');
+  
   const timeStr = date.toLocaleString('es-MX', {
     year: 'numeric', month: '2-digit', day: '2-digit',
     hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
   });
-  const badgesEl = buildBadgesEl(msg.tags);
+  
   const color = sanitizeColor(msg.tags?.color);
   const filterVal = filterInput.value.trim();
   const bodyEl = buildMessageBody(msg, filterVal);
+  
+  // Top row: time + meta + action bar
+  const topRowEl = document.createElement('div');
+  topRowEl.className = 'msg-top-row';
+  
   const timeEl = document.createElement('span');
   timeEl.className = 'msg-time';
   timeEl.textContent = timeStr;
+  
+  const badgesEl = buildBadgesEl(msg.tags);
   const metaEl = document.createElement('span');
   metaEl.className = 'msg-meta';
+  
   const userEl = document.createElement('span');
   userEl.className = 'msg-user';
   userEl.style.color = color;
   userEl.innerHTML = filterVal ? highlightText(escapeHtml(msg.displayName), filterVal) : escapeHtml(msg.displayName);
+  
   const colonEl = document.createElement('span');
   colonEl.className = 'msg-colon';
   colonEl.textContent = ':';
+  
+  metaEl.appendChild(badgesEl);
+  metaEl.appendChild(userEl);
+  metaEl.appendChild(colonEl);
+  
+  // Action bar
+  const actionBarEl = document.createElement('div');
+  actionBarEl.className = 'msg-action-bar';
   const dlBtn = document.createElement('button');
-  dlBtn.className = 'msg-download-btn';
+  dlBtn.className = 'msg-action-btn';
   dlBtn.title = 'Descargar mensaje como imagen';
-  dlBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>';
+  dlBtn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>';
   dlBtn.onclick = () => {
     if (typeof downloadMessageCard === 'function') downloadMessageCard(msg, color);
     else openDownloadModal(msg, color);
   };
-  metaEl.appendChild(badgesEl);
-  metaEl.appendChild(userEl);
-  metaEl.appendChild(colonEl);
-  row.appendChild(timeEl);
-  row.appendChild(metaEl);
+  
+  actionBarEl.appendChild(dlBtn);
+  
+  topRowEl.appendChild(timeEl);
+  topRowEl.appendChild(metaEl);
+  topRowEl.appendChild(actionBarEl);
+  
+  row.appendChild(topRowEl);
   row.appendChild(bodyEl);
-  row.appendChild(dlBtn);
+  
   return row;
 }
 

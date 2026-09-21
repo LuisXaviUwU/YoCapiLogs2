@@ -73,7 +73,17 @@ let _custTimer = null;
 let _custAnimRaf = null;
 let _custAnimStart = null;
 let _custEventHubAvatar = null;
-let _custSettings = { accentColor: '#9146ff', bgStyle: 'light', fontSize: 16, showBorder: false, borderWidth: 2, relief3D: false, showCapibara: false, fontFamily: 'Inter' };
+let _custSettings = { 
+  accentColor: '#9146ff', bgStyle: 'light', fontSize: 16, 
+  showBorder: false, borderWidth: 2, borderColor: '',
+  relief3D: false, showCapibara: false, fontFamily: 'Inter', 
+  messageShape: 'rounded', messageShadow: 'none',
+  headerGradient: false, headerGradient2: '#6441a5',
+  bodyOpacity: 1.0, bodyBgColor: '', bodyRadius: 24,
+  headerPosition: 'top-left',
+  canvasBg: 'transparent', canvasBgColor1: '#1a0a2e', canvasBgColor2: '#0d0018',
+  textBold: true, textColor: ''
+};
 let _custCapibaraImage = null;
 let _isRecording = false;
 
@@ -557,44 +567,49 @@ function createMessageRow(msg, date, isGrouped = false) {
   row.className = 'msg-row';
   if (isGrouped) row.classList.add('is-grouped');
 
-  const badgesEl = buildBadgesEl(msg.tags);
   const color = sanitizeColor(msg.tags?.color);
   const filterVal = filterInput ? filterInput.value.trim() : '';
   const bodyEl = buildMessageBody(msg, filterVal);
-  
+
+  // Top row: meta + action bar
+  const topRowEl = document.createElement('div');
+  topRowEl.className = 'msg-top-row';
+
+  // Meta: badges + username + colon
+  const badgesEl = buildBadgesEl(msg.tags);
   const metaEl = document.createElement('span');
   metaEl.className = 'msg-meta';
-  
   const userEl = document.createElement('span');
   userEl.className = 'msg-user';
   userEl.style.color = color;
   userEl.innerHTML = filterVal ? highlightText(escapeHtml(msg.displayName), filterVal) : escapeHtml(msg.displayName);
-  
   const colonEl = document.createElement('span');
   colonEl.className = 'msg-colon';
   colonEl.textContent = ':';
-  
-  const dlBtn = document.createElement('button');
-  dlBtn.className = 'msg-download-btn';
-  dlBtn.title = 'Descargar mensaje como imagen';
-  dlBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>';
-  dlBtn.onclick = () => downloadMessageCard(msg, color);
-  
-  const blerpBtn = document.createElement('button');
-  blerpBtn.className = 'msg-download-btn msg-blerp-btn';
-  blerpBtn.title = 'Ver como overlay Blerp';
-  blerpBtn.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>';
-  blerpBtn.onclick = () => openBlerpCard(msg);
-  
   metaEl.appendChild(badgesEl);
   metaEl.appendChild(userEl);
   metaEl.appendChild(colonEl);
-  
-  row.appendChild(metaEl);
+
+  // Action bar
+  const actionBarEl = document.createElement('div');
+  actionBarEl.className = 'msg-action-bar';
+  const blerpBtn = document.createElement('button');
+  blerpBtn.className = 'msg-action-btn';
+  blerpBtn.title = 'Ver como overlay Blerp';
+  blerpBtn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>';
+  blerpBtn.onclick = () => openBlerpCard(msg);
+  const dlBtn = document.createElement('button');
+  dlBtn.className = 'msg-action-btn';
+  dlBtn.title = 'Personalizar y descargar imagen';
+  dlBtn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>';
+  dlBtn.onclick = () => downloadMessageCard(msg, color);
+  actionBarEl.appendChild(blerpBtn);
+  actionBarEl.appendChild(dlBtn);
+
+  topRowEl.appendChild(metaEl);
+  topRowEl.appendChild(actionBarEl);
+  row.appendChild(topRowEl);
   row.appendChild(bodyEl);
-  row.appendChild(blerpBtn);
-  row.appendChild(dlBtn);
-  
   return row;
 }
 
@@ -775,11 +790,20 @@ function initCustomizer() {
   const borderSwitch = document.getElementById('border-mode-switch');
   const borderContainer = document.getElementById('border-width-container');
   const borderVal = document.getElementById('border-width-val');
+  const borderColorContainer = document.getElementById('border-color-container');
+  const borderColorPicker = document.getElementById('border-color-picker');
   if (borderSwitch) {
     borderSwitch.addEventListener('change', e => {
       _custSettings.showBorder = e.target.checked;
       if (borderContainer) borderContainer.style.display = e.target.checked ? 'flex' : 'none';
       if (borderVal) borderVal.style.display = e.target.checked ? 'inline' : 'none';
+      if (borderColorContainer) borderColorContainer.style.display = e.target.checked ? 'block' : 'none';
+      scheduleRender();
+    });
+  }
+  if (borderColorPicker) {
+    borderColorPicker.addEventListener('input', e => {
+      _custSettings.borderColor = e.target.value;
       scheduleRender();
     });
   }
@@ -801,6 +825,20 @@ function initCustomizer() {
   if (fontSelect) {
     fontSelect.addEventListener('change', e => {
       _custSettings.fontFamily = e.target.value;
+      scheduleRender();
+    });
+  }
+  const shapeSelect = document.getElementById('shape-select');
+  if (shapeSelect) {
+    shapeSelect.addEventListener('change', e => {
+      _custSettings.messageShape = e.target.value;
+      scheduleRender();
+    });
+  }
+  const shadowSelect = document.getElementById('shadow-select');
+  if (shadowSelect) {
+    shadowSelect.addEventListener('change', e => {
+      _custSettings.messageShadow = e.target.value;
       scheduleRender();
     });
   }
@@ -895,7 +933,106 @@ function initCustomizer() {
   }
   // TTS controls
   initTtsControls();
+
+  // ── NEW CONTROLS ──────────────────────────────────
+
+  // Body bg: dark / light / custom
+  document.querySelectorAll('.bg-options .bg-opt').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const bg = btn.dataset.bg;
+      _custSettings.bgStyle = bg === 'custom' ? 'light' : bg; // keep as light/dark base
+      _custSettings.bodyBgColor = bg === 'custom' ? (document.getElementById('body-bg-color-picker')?.value || '') : '';
+      document.querySelectorAll('.bg-options .bg-opt').forEach(b => b.classList.toggle('active', b === btn));
+      const customRow = document.getElementById('body-bg-custom-row');
+      if (customRow) customRow.style.display = bg === 'custom' ? 'block' : 'none';
+      scheduleRender();
+    });
+  });
+  document.getElementById('body-bg-color-picker')?.addEventListener('input', e => {
+    _custSettings.bodyBgColor = e.target.value;
+    scheduleRender();
+  });
+
+  // Body opacity
+  const opacitySlider = document.getElementById('body-opacity-slider');
+  const opacityVal = document.getElementById('body-opacity-val');
+  opacitySlider?.addEventListener('input', () => {
+    _custSettings.bodyOpacity = parseInt(opacitySlider.value) / 100;
+    if (opacityVal) opacityVal.textContent = opacitySlider.value + '%';
+    scheduleRender();
+  });
+
+  // Header gradient
+  const headerGradSwitch = document.getElementById('header-gradient-switch');
+  const headerGrad2Container = document.getElementById('header-gradient2-container');
+  headerGradSwitch?.addEventListener('change', e => {
+    _custSettings.headerGradient = e.target.checked;
+    if (headerGrad2Container) headerGrad2Container.style.display = e.target.checked ? 'block' : 'none';
+    scheduleRender();
+  });
+  document.getElementById('header-gradient2-picker')?.addEventListener('input', e => {
+    _custSettings.headerGradient2 = e.target.value;
+    scheduleRender();
+  });
+
+  // Body radius slider
+  const radiusSlider = document.getElementById('body-radius-slider');
+  const radiusVal = document.getElementById('body-radius-val');
+  radiusSlider?.addEventListener('input', () => {
+    _custSettings.bodyRadius = parseInt(radiusSlider.value);
+    if (radiusVal) radiusVal.textContent = radiusSlider.value + 'px';
+    scheduleRender();
+  });
+
+  // Header position
+  document.getElementById('header-position-select')?.addEventListener('change', e => {
+    _custSettings.headerPosition = e.target.value;
+    scheduleRender();
+  });
+
+  // Canvas background
+  document.querySelectorAll('.canvas-bg-opt').forEach(btn => {
+    btn.addEventListener('click', () => {
+      _custSettings.canvasBg = btn.dataset.canvasbg;
+      document.querySelectorAll('.canvas-bg-opt').forEach(b => b.classList.toggle('active', b === btn));
+      const colorsDiv = document.getElementById('canvas-bg-colors');
+      const color2Row = document.getElementById('canvas-bg-color2-row');
+      const label1 = document.getElementById('canvas-color1-label');
+      if (colorsDiv) colorsDiv.style.display = _custSettings.canvasBg !== 'transparent' ? 'block' : 'none';
+      if (color2Row) color2Row.style.display = _custSettings.canvasBg === 'gradient' ? 'flex' : 'none';
+      if (label1) label1.textContent = _custSettings.canvasBg === 'gradient' ? 'Color 1 (inicio)' : 'Color de fondo';
+      scheduleRender();
+    });
+  });
+  document.getElementById('canvas-bg-color1')?.addEventListener('input', e => {
+    _custSettings.canvasBgColor1 = e.target.value;
+    scheduleRender();
+  });
+  document.getElementById('canvas-bg-color2')?.addEventListener('input', e => {
+    _custSettings.canvasBgColor2 = e.target.value;
+    scheduleRender();
+  });
+
+  // Text bold
+  document.getElementById('text-bold-switch')?.addEventListener('change', e => {
+    _custSettings.textBold = e.target.checked;
+    scheduleRender();
+  });
+
+  // Text color
+  const textColorSwitch = document.getElementById('custom-text-color-switch');
+  const textColorContainer = document.getElementById('text-color-container');
+  const textColorPicker = document.getElementById('text-color-picker');
+  textColorSwitch?.addEventListener('change', e => {
+    _custSettings.textColor = e.target.checked ? (textColorPicker?.value || '') : '';
+    if (textColorContainer) textColorContainer.style.display = e.target.checked ? 'block' : 'none';
+    scheduleRender();
+  });
+  textColorPicker?.addEventListener('input', e => {
+    if (textColorSwitch?.checked) { _custSettings.textColor = e.target.value; scheduleRender(); }
+  });
 }
+
 
 function initTtsControls() {
   const btnTtsPlay = document.getElementById('btn-tts-play');
@@ -1032,6 +1169,8 @@ async function downloadMessageCard(msg, color) {
   _custSettings.relief3D = false;
   _custSettings.showCapibara = false;
   _custSettings.fontFamily = 'Inter';
+  _custSettings.messageShape = 'rounded';
+  _custSettings.messageShadow = 'none';
   
   if (!_custCapibaraImage) {
     _custCapibaraImage = await loadImage('img/cards/capibara.png').catch(() => null);
@@ -1050,12 +1189,57 @@ async function downloadMessageCard(msg, color) {
   if (capibaraSwitch2) capibaraSwitch2.checked = false;
   const fontSelect2 = document.getElementById('font-family-select');
   if (fontSelect2) fontSelect2.value = 'Inter';
+  const shapeSelect2 = document.getElementById('shape-select');
+  if (shapeSelect2) shapeSelect2.value = 'rounded';
+  const shadowSelect2 = document.getElementById('shadow-select');
+  if (shadowSelect2) shadowSelect2.value = 'none';
   const borderContainer = document.getElementById('border-width-container');
   if (borderContainer) borderContainer.style.display = 'none';
   const borderVal = document.getElementById('border-width-val');
   if (borderVal) { borderVal.style.display = 'none'; borderVal.textContent = '· 2px'; }
   const borderSlider = document.getElementById('border-width-slider');
   if (borderSlider) borderSlider.value = 2;
+  // Reset new controls
+  _custSettings.borderColor = '';
+  _custSettings.bodyOpacity = 1.0;
+  _custSettings.bodyBgColor = '';
+  _custSettings.headerGradient = false;
+  _custSettings.headerGradient2 = '#6441a5';
+  _custSettings.bodyRadius = 24;
+  _custSettings.headerPosition = 'top-left';
+  _custSettings.canvasBg = 'transparent';
+  _custSettings.canvasBgColor1 = '#1a0a2e';
+  _custSettings.canvasBgColor2 = '#0d0018';
+  _custSettings.textBold = true;
+  _custSettings.textColor = '';
+  // Reset new UI elements
+  const borderColorContainer = document.getElementById('border-color-container');
+  if (borderColorContainer) borderColorContainer.style.display = 'none';
+  const opacitySliderReset = document.getElementById('body-opacity-slider');
+  if (opacitySliderReset) opacitySliderReset.value = 100;
+  const opacityValReset = document.getElementById('body-opacity-val');
+  if (opacityValReset) opacityValReset.textContent = '100%';
+  const hGradSwitch = document.getElementById('header-gradient-switch');
+  if (hGradSwitch) hGradSwitch.checked = false;
+  const hGrad2Container = document.getElementById('header-gradient2-container');
+  if (hGrad2Container) hGrad2Container.style.display = 'none';
+  const radiusSliderReset = document.getElementById('body-radius-slider');
+  if (radiusSliderReset) radiusSliderReset.value = 24;
+  const radiusValReset = document.getElementById('body-radius-val');
+  if (radiusValReset) radiusValReset.textContent = '24px';
+  const hPosSelect = document.getElementById('header-position-select');
+  if (hPosSelect) hPosSelect.value = 'top-left';
+  document.querySelectorAll('.canvas-bg-opt').forEach(b => b.classList.toggle('active', b.dataset.canvasbg === 'transparent'));
+  const canvasBgColorsDiv = document.getElementById('canvas-bg-colors');
+  if (canvasBgColorsDiv) canvasBgColorsDiv.style.display = 'none';
+  const textBoldSwitch = document.getElementById('text-bold-switch');
+  if (textBoldSwitch) textBoldSwitch.checked = true;
+  const textColorSwitch2 = document.getElementById('custom-text-color-switch');
+  if (textColorSwitch2) textColorSwitch2.checked = false;
+  const textColorContainerReset = document.getElementById('text-color-container');
+  if (textColorContainerReset) textColorContainerReset.style.display = 'none';
+  const bodyBgCustomRow = document.getElementById('body-bg-custom-row');
+  if (bodyBgCustomRow) bodyBgCustomRow.style.display = 'none';
   document.querySelectorAll('.bg-options .bg-opt').forEach(b => b.classList.toggle('active', b.dataset.bg === 'light'));
   const preset = COLOR_PRESETS.find(p => p.hex.toLowerCase() === userColor.toLowerCase());
   setActiveSwatch(preset ? userColor : null);
@@ -1150,11 +1334,12 @@ async function downloadMessageCard(msg, color) {
 function renderCustomizerCanvas(timeMs = 0, targetCanvas = null) {
   const canvas = targetCanvas || document.getElementById('preview-canvas');
   if (!canvas || !_custMsg) return;
-  const { accentColor, bgStyle, fontSize, showBorder, borderWidth, showCapibara, fontFamily } = _custSettings;
+  const { accentColor, bgStyle, fontSize, showBorder, borderWidth, borderColor, showCapibara, fontFamily, messageShape, messageShadow, headerGradient, headerGradient2, bodyOpacity, bodyBgColor, bodyRadius: bodyRadiusPx, headerPosition, canvasBg, canvasBgColor1, canvasBgColor2, textBold, textColor } = _custSettings;
   let headerBg, headerText, bodyBg, bodyText, bodyBorder, headerBorder;
-  if (bgStyle === 'light') { headerBg = accentColor; headerText = '#ffffff'; bodyBg = '#ffffff'; bodyText = '#111111'; }
-  else { headerBg = accentColor; headerText = '#ffffff'; bodyBg = '#1e1e24'; bodyText = '#f2f2ff'; }
-  if (showBorder) { bodyBorder = accentColor; headerBorder = accentColor; }
+  if (bgStyle === 'light') { headerBg = accentColor; headerText = '#ffffff'; bodyBg = bodyBgColor || '#ffffff'; bodyText = '#111111'; }
+  else { headerBg = accentColor; headerText = '#ffffff'; bodyBg = bodyBgColor || '#1e1e24'; bodyText = '#f2f2ff'; }
+  if (textColor) bodyText = textColor;
+  if (showBorder) { bodyBorder = borderColor || accentColor; headerBorder = borderColor || accentColor; }
   const DPR = 2;
   const FONT_SIZE = fontSize * DPR;
   const HEADER_FONT = Math.round(14 * DPR);
@@ -1168,22 +1353,31 @@ function renderCustomizerCanvas(timeMs = 0, targetCanvas = null) {
   const BADGE_GAP = 4 * DPR;
   const EMOTE_GAP = 8 * DPR;
   const MAX_BODY_W = 420 * DPR;
-  const HEADER_RADIUS = 20 * DPR;
-  const BODY_RADIUS = 24 * DPR;
+  const HEADER_RADIUS = Math.min((bodyRadiusPx ?? 24), 20) * DPR;
+  const BODY_RADIUS = (bodyRadiusPx ?? 24) * DPR;
   const HEADER_OVERLAP = 15 * DPR;
   const HEADER_LEFT_MG = 20 * DPR;
   const LINE_HEIGHT = 1.5;
   const mc = document.createElement('canvas').getContext('2d');
   mc.font = `800 ${HEADER_FONT}px "${fontFamily}", sans-serif`;
-  const avatarSize = _custEventHubAvatar ? BADGE_SIZE * 1.5 : 0;
-  const avatarW = _custEventHubAvatar ? avatarSize + BADGE_GAP : 0;
+  // Avatar removed as per user request
+  const avatarSize = 0;
+  const avatarW = 0;
   const badgesW = _custBadgeImages.reduce((sum, b) => b.img ? sum + BADGE_SIZE + BADGE_GAP : sum, 0);
-  const headerContentW = avatarW + badgesW + mc.measureText(_custMsg.displayName).width;
+  const headerContentW = badgesW + mc.measureText(_custMsg.displayName).width;
   const headerW = headerContentW + HEADER_PAD_H * 2;
   const headerH = Math.max(BADGE_SIZE, HEADER_FONT) + HEADER_PAD_V * 2;
   mc.font = `700 ${FONT_SIZE}px "${fontFamily}", sans-serif`;
   const bodyContentW = MAX_BODY_W - BODY_PAD * 2;
-  let renderSegs = _custSegments;
+  
+  // Filter out "CheerX" patterns from bits
+  let renderSegs = _custSegments.map(s => {
+    if (s.type === 'text') {
+      return Object.assign({}, s, { value: s.value.replace(/\b[Cc]heer\d+\s*/g, '') });
+    }
+    return s;
+  }).filter(s => s.type !== 'text' || s.value.length > 0);
+
   const showTitle = document.getElementById('eh-hide-title')?.checked;
   if (!showTitle) {
     const newSegs = [];
@@ -1275,31 +1469,81 @@ function renderCustomizerCanvas(timeMs = 0, targetCanvas = null) {
   if (canvas.height !== totalH) canvas.height = totalH;
   const ctx = canvas.getContext('2d');
   ctx.clearRect(0, 0, totalW, totalH);
+  // Canvas background
+  if (canvasBg === 'solid') {
+    ctx.fillStyle = canvasBgColor1 || '#1a0a2e';
+    ctx.fillRect(0, 0, totalW, totalH);
+  } else if (canvasBg === 'gradient') {
+    const cbGrad = ctx.createLinearGradient(0, 0, 0, totalH);
+    cbGrad.addColorStop(0, canvasBgColor1 || '#1a0a2e');
+    cbGrad.addColorStop(1, canvasBgColor2 || '#0d0018');
+    ctx.fillStyle = cbGrad;
+    ctx.fillRect(0, 0, totalW, totalH);
+  }
   const bodyX = PADDING;
   const bodyY = capibaraH + PADDING + headerH - HEADER_OVERLAP;
-  const headerX = bodyX + HEADER_LEFT_MG;
+  const headerX = headerPosition === 'top-center'
+    ? bodyX + Math.max(0, (bodyW - headerW) / 2)
+    : bodyX + HEADER_LEFT_MG;
   const headerY = capibaraH + PADDING;
-  function roundRect(cx, x, y, w, h, r) {
+
+  function roundRect(cx, x, y, w, h, r, shape = 'rounded', isHeader = false) {
+    let rTL = r, rTR = r, rBR = r, rBL = r;
+    if (shape === 'bubble' && !isHeader) {
+      rBL = 0;
+    } else if (shape === 'rectangular') {
+      rTL = 4 * DPR; rTR = 4 * DPR; rBR = 4 * DPR; rBL = 4 * DPR;
+    }
     cx.beginPath();
-    cx.moveTo(x + r, y); cx.lineTo(x + w - r, y); cx.quadraticCurveTo(x + w, y, x + w, y + r);
-    cx.lineTo(x + w, y + h - r); cx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-    cx.lineTo(x + r, y + h); cx.quadraticCurveTo(x, y + h, x, y + h - r);
-    cx.lineTo(x, y + r); cx.quadraticCurveTo(x, y, x + r, y); cx.closePath();
+    cx.moveTo(x + rTL, y); 
+    cx.lineTo(x + w - rTR, y); 
+    cx.quadraticCurveTo(x + w, y, x + w, y + rTR);
+    cx.lineTo(x + w, y + h - rBR); 
+    cx.quadraticCurveTo(x + w, y + h, x + w - rBR, y + h);
+    cx.lineTo(x + rBL, y + h); 
+    if (rBL > 0) {
+      cx.quadraticCurveTo(x, y + h, x, y + h - rBL);
+    } else {
+      cx.lineTo(x, y + h);
+    }
+    cx.lineTo(x, y + rTL); 
+    cx.quadraticCurveTo(x, y, x + rTL, y); 
+    cx.closePath();
+  }
+
+  function applyShadow(cx) {
+    if (messageShadow === 'soft') {
+      cx.shadowColor = 'rgba(0, 0, 0, 0.15)';
+      cx.shadowBlur = 15 * DPR;
+      cx.shadowOffsetX = 0;
+      cx.shadowOffsetY = 8 * DPR;
+    } else if (messageShadow === 'hard') {
+      cx.shadowColor = 'rgba(0, 0, 0, 0.4)';
+      cx.shadowBlur = 0;
+      cx.shadowOffsetX = 8 * DPR;
+      cx.shadowOffsetY = 8 * DPR;
+    }
   }
 
   if (_custSettings.relief3D) {
     ctx.save();
     ctx.fillStyle = accentColor;
     // Draw relief for body
-    roundRect(ctx, bodyX + reliefOffsetX, bodyY + reliefOffsetY, bodyW, bodyInnerH, BODY_RADIUS);
+    roundRect(ctx, bodyX + reliefOffsetX, bodyY + reliefOffsetY, bodyW, bodyInnerH, BODY_RADIUS, messageShape, false);
     ctx.fill();
     ctx.restore();
   }
 
   // Draw main body
-  ctx.save(); roundRect(ctx, bodyX, bodyY, bodyW, bodyInnerH, BODY_RADIUS); ctx.fillStyle = bodyBg; ctx.fill(); ctx.restore();
-  if (bodyBorder) { ctx.save(); roundRect(ctx, bodyX, bodyY, bodyW, bodyInnerH, BODY_RADIUS); ctx.strokeStyle = bodyBorder; ctx.lineWidth = borderWidth * DPR; ctx.stroke(); ctx.restore(); }
-  ctx.font = `700 ${FONT_SIZE}px "${fontFamily}", sans-serif`;
+  ctx.save(); 
+  applyShadow(ctx);
+  roundRect(ctx, bodyX, bodyY, bodyW, bodyInnerH, BODY_RADIUS, messageShape, false); 
+  ctx.fillStyle = bodyOpacity < 1.0 ? hexToRgba(bodyBg, bodyOpacity) : bodyBg; 
+  ctx.fill(); 
+  ctx.restore();
+
+  if (bodyBorder) { ctx.save(); roundRect(ctx, bodyX, bodyY, bodyW, bodyInnerH, BODY_RADIUS, messageShape, false); ctx.strokeStyle = bodyBorder; ctx.lineWidth = borderWidth * DPR; ctx.stroke(); ctx.restore(); }
+  ctx.font = `${textBold ? '700' : '400'} ${FONT_SIZE}px "${fontFamily}", sans-serif`;
   ctx.fillStyle = bodyText; ctx.textBaseline = 'middle';
   let drawY = bodyY + BODY_PAD_TOP;
   for (const ln of lines) {
@@ -1335,16 +1579,24 @@ function renderCustomizerCanvas(timeMs = 0, targetCanvas = null) {
     ctx.drawImage(_custCapibaraImage, capX, capY, capW, capH);
   }
 
-  ctx.save(); roundRect(ctx, headerX, headerY, headerW, headerH, HEADER_RADIUS); ctx.fillStyle = headerBg; ctx.fill(); ctx.restore();
-  if (headerBorder) { ctx.save(); roundRect(ctx, headerX, headerY, headerW, headerH, HEADER_RADIUS); ctx.strokeStyle = headerBorder; ctx.lineWidth = borderWidth * DPR; ctx.stroke(); ctx.restore(); }
+  ctx.save(); 
+  applyShadow(ctx);
+  roundRect(ctx, headerX, headerY, headerW, headerH, HEADER_RADIUS, messageShape, true); 
+  if (headerGradient) {
+    const hGrad = ctx.createLinearGradient(headerX, headerY, headerX + headerW, headerY + headerH);
+    hGrad.addColorStop(0, accentColor);
+    hGrad.addColorStop(1, headerGradient2 || '#6441a5');
+    ctx.fillStyle = hGrad;
+  } else {
+    ctx.fillStyle = headerBg;
+  }
+  ctx.fill(); 
+  ctx.restore();
+
+  if (headerBorder) { ctx.save(); roundRect(ctx, headerX, headerY, headerW, headerH, HEADER_RADIUS, messageShape, true); ctx.strokeStyle = headerBorder; ctx.lineWidth = borderWidth * DPR; ctx.stroke(); ctx.restore(); }
   let hx = headerX + HEADER_PAD_H;
   const hcy = headerY + headerH / 2;
-  if (_custEventHubAvatar) {
-    const avSize = BADGE_SIZE * 1.5;
-    ctx.save(); ctx.beginPath(); ctx.arc(hx + avSize / 2, hcy, avSize / 2, 0, Math.PI * 2); ctx.closePath(); ctx.clip();
-    ctx.drawImage(_custEventHubAvatar, hx, hcy - avSize / 2, avSize, avSize); ctx.restore();
-    hx += avSize + BADGE_GAP;
-  }
+  // Avatar drawing removed
   for (const badge of _custBadgeImages) {
     if (badge.img) { try { ctx.drawImage(badge.img, hx, hcy - BADGE_SIZE / 2, BADGE_SIZE, BADGE_SIZE); } catch (e) {} hx += BADGE_SIZE + BADGE_GAP; }
   }
