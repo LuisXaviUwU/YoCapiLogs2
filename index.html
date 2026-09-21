@@ -398,6 +398,36 @@
                                 <div class="bg-options">
                                     <button class="bg-opt" data-bg="dark">Oscuro</button>
                                     <button class="bg-opt active" id="bg-opt-light" data-bg="light">Claro</button>
+                                    <button class="bg-opt" data-bg="custom">Personalizado</button>
+                                </div>
+                                <div id="body-bg-custom-row" style="display:none; margin-top:10px;">
+                                    <div class="custom-color-row">
+                                        <input type="color" id="body-bg-color-picker" class="color-picker-input" value="#ffffff">
+                                        <span class="custom-color-label">Color de fondo del mensaje</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="ctrl-section">
+                                <label class="ctrl-label">Opacidad del fondo · <span id="body-opacity-val">100%</span></label>
+                                <div class="slider-row">
+                                    <span class="slider-lbl-sm" style="opacity:.4;">▢</span>
+                                    <input type="range" id="body-opacity-slider" min="30" max="100" value="100" step="5" class="ctrl-slider">
+                                    <span class="slider-lbl-lg" style="opacity:.9;">▣</span>
+                                </div>
+                            </div>
+                            <div class="ctrl-section">
+                                <div class="date-label-row" style="display:flex;justify-content:space-between;align-items:center;">
+                                    <label class="ctrl-label" style="margin-bottom:0;">Gradiente en Header</label>
+                                    <label class="toggle-switch" for="header-gradient-switch">
+                                        <input type="checkbox" id="header-gradient-switch">
+                                        <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                                    </label>
+                                </div>
+                                <div id="header-gradient2-container" style="display:none; margin-top:10px;">
+                                    <div class="custom-color-row">
+                                        <input type="color" id="header-gradient2-picker" class="color-picker-input" value="#6441a5">
+                                        <span class="custom-color-label">Color 2 del gradiente</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -437,6 +467,12 @@
                                     <input type="range" id="border-width-slider" min="1" max="8" value="2" step="1" class="ctrl-slider">
                                     <span class="slider-lbl-lg" style="font-weight:900;letter-spacing:-2px;">━━</span>
                                 </div>
+                                <div id="border-color-container" style="display:none; margin-top:10px;">
+                                    <div class="custom-color-row">
+                                        <input type="color" id="border-color-picker" class="color-picker-input" value="#9146ff">
+                                        <span class="custom-color-label">Color del borde</span>
+                                    </div>
+                                </div>
                             </div>
                             <div class="ctrl-section">
                                 <div class="date-label-row" style="display:flex;justify-content:space-between;align-items:center;">
@@ -446,6 +482,37 @@
                                         <span class="toggle-track"><span class="toggle-thumb"></span></span>
                                     </label>
                                 </div>
+                            </div>
+                            <div class="ctrl-section">
+                                <label class="ctrl-label">Forma del Mensaje</label>
+                                <select id="shape-select" class="field-input" style="height:32px;padding:0 8px;width:100%;">
+                                    <option value="rounded">Redondeado (Estándar)</option>
+                                    <option value="bubble">Burbuja de Chat</option>
+                                    <option value="rectangular">Rectangular</option>
+                                </select>
+                            </div>
+                            <div class="ctrl-section">
+                                <label class="ctrl-label">Sombra</label>
+                                <select id="shadow-select" class="field-input" style="height:32px;padding:0 8px;width:100%;">
+                                    <option value="none">Sin sombra</option>
+                                    <option value="soft">Sombra Suave</option>
+                                    <option value="hard">Sombra Fuerte</option>
+                                </select>
+                            </div>
+                            <div class="ctrl-section">
+                                <label class="ctrl-label">Radio de bordes · <span id="body-radius-val">24px</span></label>
+                                <div class="slider-row">
+                                    <span class="slider-lbl-sm" style="font-size:10px;">⬜</span>
+                                    <input type="range" id="body-radius-slider" min="0" max="40" value="24" step="2" class="ctrl-slider">
+                                    <span class="slider-lbl-lg" style="font-size:10px;">⬛</span>
+                                </div>
+                            </div>
+                            <div class="ctrl-section">
+                                <label class="ctrl-label">Posición del Nombre</label>
+                                <select id="header-position-select" class="field-input" style="height:32px;padding:0 8px;width:100%;">
+                                    <option value="top-left">Arriba izquierda (estándar)</option>
+                                    <option value="top-center">Arriba centrado</option>
+                                </select>
                             </div>
                         </div>
                     </details>
@@ -481,6 +548,60 @@
                                 <div style="margin-top:8px;display:flex;align-items:center;gap:8px;">
                                     <input type="checkbox" id="eh-strip-qs" style="accent-color:var(--purple-lt);">
                                     <label for="eh-strip-qs" style="font-size:.8rem;color:var(--text-lo);cursor:pointer;">Quitar !s</label>
+                                </div>
+                            </div>
+                            <div class="ctrl-section">
+                                <div class="date-label-row" style="display:flex;justify-content:space-between;align-items:center;">
+                                    <label class="ctrl-label" style="margin-bottom:0;">Texto en negrita</label>
+                                    <label class="toggle-switch" for="text-bold-switch">
+                                        <input type="checkbox" id="text-bold-switch" checked>
+                                        <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="ctrl-section">
+                                <div class="date-label-row" style="display:flex;justify-content:space-between;align-items:center;">
+                                    <label class="ctrl-label" style="margin-bottom:0;">Color del texto</label>
+                                    <label class="toggle-switch" for="custom-text-color-switch">
+                                        <input type="checkbox" id="custom-text-color-switch">
+                                        <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                                    </label>
+                                </div>
+                                <div id="text-color-container" style="display:none; margin-top:10px;">
+                                    <div class="custom-color-row">
+                                        <input type="color" id="text-color-picker" class="color-picker-input" value="#111111">
+                                        <span class="custom-color-label">Color personalizado</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </details>
+
+                    <details class="customizer-accordion">
+                        <summary class="accordion-header">
+                            <span class="accordion-title">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+                                Fondo del Canvas
+                            </span>
+                            <svg class="accordion-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                        </summary>
+                        <div class="accordion-content">
+                            <div class="ctrl-section">
+                                <label class="ctrl-label">Tipo de fondo</label>
+                                <div class="canvas-bg-options">
+                                    <button class="canvas-bg-opt active" data-canvasbg="transparent">Transparente</button>
+                                    <button class="canvas-bg-opt" data-canvasbg="solid">Sólido</button>
+                                    <button class="canvas-bg-opt" data-canvasbg="gradient">Gradiente</button>
+                                </div>
+                            </div>
+                            <div id="canvas-bg-colors" style="display:none; margin-top:10px;">
+                                <div class="custom-color-row">
+                                    <input type="color" id="canvas-bg-color1" class="color-picker-input" value="#1a0a2e">
+                                    <span class="custom-color-label" id="canvas-color1-label">Color de fondo</span>
+                                </div>
+                                <div class="custom-color-row" id="canvas-bg-color2-row" style="display:none; margin-top:8px;">
+                                    <input type="color" id="canvas-bg-color2" class="color-picker-input" value="#0d0018">
+                                    <span class="custom-color-label">Color 2 (gradiente)</span>
                                 </div>
                             </div>
                         </div>
