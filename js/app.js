@@ -317,6 +317,10 @@ async function loadSavedLogsList(channel) {
   try {
     const tree = typeof getSavedLogsList === 'function' ? await getSavedLogsList(channel) : {};
     
+    // --- Sincronización en segundo plano de días faltantes ---
+    // Clonamos el árbol antes de inyectar hoy para saber cuál es realmente el último día.
+    const treeClone = JSON.parse(JSON.stringify(tree));
+    
     // Inyectar siempre el día de hoy para que se pueda consultar aunque no esté en la BD aún
     const now = new Date();
     const yStr = now.getFullYear().toString();
@@ -331,6 +335,10 @@ async function loadSavedLogsList(channel) {
       tree[yStr][mStr].sort((a, b) => parseInt(b.split('-')[2]) - parseInt(a.split('-')[2]));
     }
 
+    if (typeof saveLogsLocallySupabase === 'function') {
+      setTimeout(() => syncMissingDaysBackground(channel, treeClone), 3000);
+    }
+
     if (Object.keys(tree).length === 0) {
       localDatesEmpty.innerHTML = `No hay logs guardados para <strong>#${channel}</strong>`;
       return;
@@ -342,6 +350,153 @@ async function loadSavedLogsList(channel) {
   } catch (err) {
     console.error(err);
     localDatesEmpty.innerHTML = `<span style="color:var(--text-hi)">Error: ${err.message}</span>`;
+  }
+}
+
+// ===== Funciones de sincronización en segundo plano =====
+
+// Función de notificaciones (toast) para la vista pública
+function showToast(msg, type = 'ok') {
+  const existing = document.getElementById('toast-notification');
+  if (existing) existing.remove();
+  const t = document.createElement('div');
+  t.id = 'toast-notification';
+  t.className = `toast toast--${type}`;
+  t.innerHTML = msg;
+  document.body.appendChild(t);
+  requestAnimationFrame(() => t.classList.add('toast--show'));
+  setTimeout(() => { t.classList.remove('toast--show'); setTimeout(() => t.remove(), 400); }, 4000);
+}
+
+let _isSyncingMissing = false;
+
+async function syncMissingDaysBackground(channel, tree) {
+  if (_isSyncingMissing) return;
+  
+  const allDates = [];
+  for (const y in tree) {
+    for (const m in tree[y]) {
+      for (const d of tree[y][m]) {
+        allDates.push(new Date(`${d}T00:00:00`));
+      }
+    }
+  }
+  
+  // Si no hay historial, al menos intentamos descargar "ayer"
+  const now = new Date();
+  now.setHours(0,0,0,0);
+  
+  let lastDate;
+  if (allDates.length === 0) {
+    lastDate = new Date(now);
+    lastDate.setDate(lastDate.getDate() - 2); // Empezaremos a buscar desde antes de ayer para obtener ayer
+  } else {
+    allDates.sort((a, b) => b - a);
+    lastDate = allDates[0];
+  }
+  
+  const missingDates = [];
+  const curr = new Date(lastDate);
+  curr.setDate(curr.getDate() + 1);
+  
+  const end = new Date(now);
+  end.setDate(end.getDate() - 1); // Hasta ayer
+  
+  while (curr <= end) {
+    const yStr = curr.getFullYear().toString();
+    const mStr = String(curr.getMonth() + 1).padStart(2, '0');
+    const dStr = String(curr.getDate()).padStart(2, '0');
+    const dKey = `${yStr}-${mStr}-${dStr}`;
+    
+    const hasIt = tree[yStr] && tree[yStr][mStr] && tree[yStr][mStr].includes(dKey);
+    if (!hasIt) {
+      missingDates.push({ year: yStr, month: mStr, day: dStr, dateKey: dKey });
+    }
+    curr.setDate(curr.getDate() + 1);
+  }
+  
+  if (missingDates.length === 0) return;
+  
+  _isSyncingMissing = true;
+  showToast(`Sincronizando ${missingDates.length} día(s) faltante(s)...`, 'warn');
+  
+  let successCount = 0;
+  for (let i = 0; i < missingDates.length; i++) {
+    const d = missingDates[i];
+    try {
+      const saved = await syncDayBackground(channel, d.year, d.month, d.day);
+      if (saved) successCount++;
+    } catch (e) {
+      console.warn('Error syncing', d.dateKey, e);
+    }
+    
+    // Cooldown entre días para no saturar la API
+    if (i < missingDates.length - 1) {
+      await new Promise(r => setTimeout(r, 2000));
+    }
+  }
+  
+  _isSyncingMissing = false;
+  if (successCount > 0) {
+    showToast(`Sincronización completada (${successCount} recuperados)`, 'ok');
+  } else {
+    showToast(`Sincronización finalizada (sin datos nuevos)`, 'ok');
+  }
+}
+
+async function syncDayBackground(channel, year, month, day) {
+  try {
+    const localStart = new Date(year, parseInt(month) - 1, parseInt(day), 0, 0, 0);
+    const localEnd   = new Date(year, parseInt(month) - 1, parseInt(day), 23, 59, 59, 999);
+    
+    const fetchApi = async (url) => {
+      const resp = await fetch(url);
+      if (!resp.ok) {
+        if (resp.status === 404 || resp.status === 400) return { messages: [] };
+        throw new Error(`Error ${resp.status}`);
+      }
+      return await resp.json();
+    };
+
+    const utcDay1 = { y: localStart.getUTCFullYear(), m: localStart.getUTCMonth() + 1, d: localStart.getUTCDate() };
+    const utcDay2 = { y: localEnd.getUTCFullYear(),   m: localEnd.getUTCMonth() + 1,   d: localEnd.getUTCDate() };
+    const urlsToFetch = [`${API_BASE}/channel/${channel}/${utcDay1.y}/${utcDay1.m}/${utcDay1.d}?json=1`];
+    if (utcDay1.y !== utcDay2.y || utcDay1.m !== utcDay2.m || utcDay1.d !== utcDay2.d) {
+      urlsToFetch.push(`${API_BASE}/channel/${channel}/${utcDay2.y}/${utcDay2.m}/${utcDay2.d}?json=1`);
+    }
+    
+    const results = await Promise.all(urlsToFetch.map(url => fetchApi(url).catch(() => ({ messages: [] }))));
+    let apiMsgs = [];
+    for (const res of results) {
+      if (res && res.messages) apiMsgs = apiMsgs.concat(res.messages);
+    }
+    
+    apiMsgs = apiMsgs.filter(msg => {
+      const d2 = new Date(msg.timestamp);
+      return d2.getFullYear() === parseInt(year, 10) &&
+        d2.getMonth() === parseInt(month, 10) - 1 &&
+        d2.getDate() === parseInt(day, 10);
+    });
+
+    if (apiMsgs.length > 0) {
+      const seenIds = new Set();
+      const dedup = apiMsgs.filter(msg => {
+        const id = msg.tags?.id || msg.timestamp + msg.displayName + msg.text;
+        if (seenIds.has(id)) return false;
+        seenIds.add(id);
+        return true;
+      });
+      dedup.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+      
+      const dateKey = `${year}-${month}-${day}`;
+      await saveLogsLocallySupabase(channel, dateKey, dedup);
+      console.log(`[Background Sync] Recuperado y guardado ${dateKey} para ${channel} (${dedup.length} mensajes)`);
+      return true;
+    }
+    return false;
+  } catch (err) {
+    console.warn('[Background Sync] Falló:', err.message);
+    return false;
   }
 }
 
