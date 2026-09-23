@@ -316,6 +316,21 @@ async function loadSavedLogsList(channel) {
 
   try {
     const tree = typeof getSavedLogsList === 'function' ? await getSavedLogsList(channel) : {};
+    
+    // Inyectar siempre el día de hoy para que se pueda consultar aunque no esté en la BD aún
+    const now = new Date();
+    const yStr = now.getFullYear().toString();
+    const mStr = String(now.getMonth() + 1).padStart(2, '0');
+    const dStr = `${yStr}-${mStr}-${String(now.getDate()).padStart(2, '0')}`;
+    
+    if (!tree[yStr]) tree[yStr] = {};
+    if (!tree[yStr][mStr]) tree[yStr][mStr] = [];
+    if (!tree[yStr][mStr].includes(dStr)) {
+      tree[yStr][mStr].push(dStr);
+      // Ordenar los días numéricamente de mayor a menor para mantener consistencia
+      tree[yStr][mStr].sort((a, b) => parseInt(b.split('-')[2]) - parseInt(a.split('-')[2]));
+    }
+
     if (Object.keys(tree).length === 0) {
       localDatesEmpty.innerHTML = `No hay logs guardados para <strong>#${channel}</strong>`;
       return;
@@ -447,11 +462,80 @@ async function loadLocalLogs(channel, date) {
       data = { messages: allMsgs };
 
     } else {
-      // --- Day mode: load ONLY from Firebase (instant fast loading) ---
+      // --- Day mode: Supabase + API merged ---
       const supabaseData = typeof getSavedLog === 'function' ? await getSavedLog(channel, date) : null;
       const supabaseMsgs = (supabaseData && supabaseData.messages) ? supabaseData.messages : [];
       
-      data = { messages: supabaseMsgs };
+      let lastSupabaseTs = 0;
+      for (const m of supabaseMsgs) {
+        const t = new Date(m.timestamp).getTime();
+        if (t > lastSupabaseTs) lastSupabaseTs = t;
+      }
+
+      let apiMsgs = [];
+      try {
+        const fetchApi = async (url) => {
+          const resp = await fetch(url);
+          if (!resp.ok) {
+            if (resp.status === 404 || resp.status === 400) return { messages: [] };
+            throw new Error(`Error ${resp.status}: ${resp.statusText}`);
+          }
+          return await resp.json();
+        };
+
+        const localStart = new Date(year, parseInt(month) - 1, parseInt(day), 0, 0, 0);
+        const localEnd   = new Date(year, parseInt(month) - 1, parseInt(day), 23, 59, 59, 999);
+        
+        // Consultar a la API si la fecha solicitada es Hoy, Ayer 
+        // (para cubrir streams que cruzan la medianoche), o si Supabase estaba vacío.
+        const now = new Date();
+        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+        
+        // Diferencia en días entre hoy y la fecha solicitada
+        const diffTime = startOfToday.getTime() - localStart.getTime();
+        const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+        
+        // Si la diferencia es 0 (Hoy) o 1 (Ayer) o si buscamos un día futuro (diff < 0 por error)
+        const isTodayOrYesterday = (diffDays <= 1);
+
+        if (isTodayOrYesterday || supabaseMsgs.length === 0) {
+          const utcDay1 = { y: localStart.getUTCFullYear(), m: localStart.getUTCMonth() + 1, d: localStart.getUTCDate() };
+          const utcDay2 = { y: localEnd.getUTCFullYear(),   m: localEnd.getUTCMonth() + 1,   d: localEnd.getUTCDate() };
+          const urlsToFetch = [`${API_BASE}/channel/${channel}/${utcDay1.y}/${utcDay1.m}/${utcDay1.d}?json=1`];
+          if (utcDay1.y !== utcDay2.y || utcDay1.m !== utcDay2.m || utcDay1.d !== utcDay2.d) {
+            urlsToFetch.push(`${API_BASE}/channel/${channel}/${utcDay2.y}/${utcDay2.m}/${utcDay2.d}?json=1`);
+          }
+          const results = await Promise.all(urlsToFetch.map(url => fetchApi(url)));
+          for (const res of results) {
+            if (res && res.messages) apiMsgs = apiMsgs.concat(res.messages);
+          }
+          apiMsgs = apiMsgs.filter(msg => {
+            const d2 = new Date(msg.timestamp);
+            return d2.getFullYear() === parseInt(year, 10) &&
+              d2.getMonth() === parseInt(month, 10) - 1 &&
+              d2.getDate() === parseInt(day, 10);
+          });
+        }
+      } catch (apiErr) {
+        console.warn('[Public loadLogs] API fetch failed, using Supabase only:', apiErr.message);
+      }
+
+      const combined = [...supabaseMsgs, ...apiMsgs];
+      const seenIds = new Set();
+      const merged = combined.filter(msg => {
+        const id = msg.tags?.id || msg.timestamp + msg.displayName + msg.text;
+        if (seenIds.has(id)) return false;
+        seenIds.add(id);
+        return true;
+      });
+      merged.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+      const lastMergedTs = merged.length ? new Date(merged[merged.length - 1].timestamp).getTime() : 0;
+      if ((merged.length > supabaseMsgs.length || lastMergedTs > lastSupabaseTs) && typeof saveLogsLocallySupabase === 'function') {
+        saveLogsLocallySupabase(channel, date, merged).catch(console.error);
+      }
+
+      data = { messages: merged };
     } // end else (day mode)
 
     if (!data || !data.messages || data.messages.length === 0) {
