@@ -176,6 +176,10 @@ async function init() {
 
   document.getElementById('btn-saved-days')?.addEventListener('click', openSavedDaysModal);
   document.getElementById('saved-days-close')?.addEventListener('click', closeSavedDaysModal);
+  document.getElementById('saved-days-refresh')?.addEventListener('click', () => {
+    const channel = channelInput.value.trim().toLowerCase() || 'yocapi_pr';
+    renderSavedDaysList(channel);
+  });
   document.getElementById('saved-days-modal')?.addEventListener('click', e => {
     if (e.target === document.getElementById('saved-days-modal')) closeSavedDaysModal();
   });
@@ -286,7 +290,13 @@ async function loadLogs() {
 
       const lastMergedTs = merged.length ? new Date(merged[merged.length - 1].timestamp).getTime() : 0;
       if ((merged.length > supabaseMsgs.length || lastMergedTs > lastSupabaseTs) && typeof saveLogsLocallySupabase === 'function') {
-        saveLogsLocallySupabase(channel, dateStr, merged).catch(console.error);
+        saveLogsLocallySupabase(channel, dateStr, merged).then(() => {
+          // Refresh saved days modal if it's open
+          const modal = document.getElementById('saved-days-modal');
+          if (modal && modal.style.display !== 'none') {
+            renderSavedDaysList(channel);
+          }
+        }).catch(console.error);
       }
 
       data = { messages: merged };
