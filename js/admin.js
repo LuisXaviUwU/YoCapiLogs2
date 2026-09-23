@@ -174,6 +174,12 @@ async function init() {
   applyDateMode();
   dateSwitch.addEventListener('change', applyDateMode);
 
+  document.getElementById('btn-saved-days')?.addEventListener('click', openSavedDaysModal);
+  document.getElementById('saved-days-close')?.addEventListener('click', closeSavedDaysModal);
+  document.getElementById('saved-days-modal')?.addEventListener('click', e => {
+    if (e.target === document.getElementById('saved-days-modal')) closeSavedDaysModal();
+  });
+
   btnHistory.addEventListener('click', openHistoryModal);
   document.getElementById('history-close')?.addEventListener('click', closeHistoryModal);
   document.getElementById('history-modal')?.addEventListener('click', e => {
@@ -569,6 +575,76 @@ function renderHistoryList() {
       userInput.focus();
     });
     list.appendChild(item);
+  }
+}
+
+// ===== Saved Days Modal =====
+function openSavedDaysModal() {
+  const channel = channelInput.value.trim().toLowerCase() || 'yocapi_pr';
+  document.getElementById('saved-days-modal').style.display = 'flex';
+  renderSavedDaysList(channel);
+}
+function closeSavedDaysModal() {
+  document.getElementById('saved-days-modal').style.display = 'none';
+}
+async function renderSavedDaysList(channel) {
+  const list = document.getElementById('saved-days-list');
+  list.innerHTML = '<div class="loading-spinner" style="margin: 20px auto; display: block;"></div>';
+  
+  if (typeof fetchSavedLogsDates !== 'function') {
+    list.innerHTML = '<p class="history-empty">Error: función no encontrada.</p>';
+    return;
+  }
+  
+  try {
+    const dates = await fetchSavedLogsDates(channel);
+    dates.sort((a, b) => b.localeCompare(a)); // Descending order
+    
+    if (dates.length === 0) {
+      list.innerHTML = `<p class="history-empty">No hay días guardados para #${channel}.</p>`;
+      return;
+    }
+    
+    list.innerHTML = '';
+    for (const date of dates) {
+      const item = document.createElement('div');
+      item.className = 'history-item';
+      item.style.justifyContent = 'space-between';
+      item.style.cursor = 'default';
+      
+      const dateEl = document.createElement('div');
+      dateEl.className = 'history-username';
+      dateEl.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>${date}`;
+      
+      const delBtn = document.createElement('button');
+      delBtn.className = 'nav-btn';
+      delBtn.style.color = 'var(--red)';
+      delBtn.style.border = '1px solid var(--red-dark)';
+      delBtn.style.padding = '4px 8px';
+      delBtn.style.height = 'auto';
+      delBtn.style.fontSize = '12px';
+      delBtn.innerHTML = 'Borrar';
+      delBtn.onclick = async () => {
+        if (!confirm(`¿Borrar el día ${date} de la base de datos?\nSi fue borrado antes, esto lo confirmará.`)) return;
+        delBtn.textContent = '...';
+        delBtn.disabled = true;
+        const res = await deleteLogDay(channel, date);
+        if (res.ok) {
+          showToast ? showToast(`Día ${date} eliminado`, 'ok') : alert('Día eliminado');
+          renderSavedDaysList(channel);
+        } else {
+          showToast ? showToast('Error al borrar', 'error') : alert('Error');
+          delBtn.textContent = 'Borrar';
+          delBtn.disabled = false;
+        }
+      };
+      
+      item.appendChild(dateEl);
+      item.appendChild(delBtn);
+      list.appendChild(item);
+    }
+  } catch (err) {
+    list.innerHTML = `<p class="history-empty">Error al cargar: ${err.message}</p>`;
   }
 }
 
