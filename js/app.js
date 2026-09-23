@@ -368,6 +368,55 @@ function showToast(msg, type = 'ok') {
   setTimeout(() => { t.classList.remove('toast--show'); setTimeout(() => t.remove(), 400); }, 4000);
 }
 
+// Banner de sincronización grande y visible
+function showSyncBanner(msg, type = 'syncing') {
+  let banner = document.getElementById('sync-banner');
+  if (!banner) {
+    banner = document.createElement('div');
+    banner.id = 'sync-banner';
+    banner.style.cssText = [
+      'position:fixed', 'bottom:0', 'left:0', 'right:0', 'z-index:99999',
+      'padding:14px 24px', 'display:flex', 'align-items:center', 'justify-content:center', 'gap:12px',
+      'font-family:var(--font,Inter,sans-serif)', 'font-size:15px', 'font-weight:600',
+      'box-shadow:0 -4px 32px rgba(0,0,0,.5)',
+      'transition:transform .3s ease, opacity .3s ease',
+      'transform:translateY(100%)', 'opacity:0'
+    ].join(';');
+    document.body.appendChild(banner);
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      banner.style.transform = 'translateY(0)';
+      banner.style.opacity = '1';
+    }));
+  }
+  if (type === 'syncing') {
+    banner.style.background = 'linear-gradient(90deg,#1a0a2e,#2a1050)';
+    banner.style.color = '#c9a8ff';
+    banner.style.borderTop = '2px solid #9146ff';
+    banner.innerHTML = `<span style="display:inline-block;width:16px;height:16px;border:2.5px solid #9146ff;border-top-color:transparent;border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0"></span>${msg}`;
+  } else if (type === 'success') {
+    banner.style.background = 'linear-gradient(90deg,#0a1f0a,#0d2e0d)';
+    banner.style.color = '#6dff9a';
+    banner.style.borderTop = '2px solid #2dcc5f';
+    banner.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2dcc5f" stroke-width="2.5" stroke-linecap="round" flex-shrink="0"><path d="M20 6L9 17l-5-5"/></svg>${msg}`;
+  }
+}
+
+function hideSyncBanner() {
+  const banner = document.getElementById('sync-banner');
+  if (!banner) return;
+  banner.style.transform = 'translateY(100%)';
+  banner.style.opacity = '0';
+  setTimeout(() => banner.remove(), 350);
+}
+
+// Inyectar keyframe de spin si no existe
+if (!document.getElementById('sync-spin-style')) {
+  const s = document.createElement('style');
+  s.id = 'sync-spin-style';
+  s.textContent = '@keyframes spin{to{transform:rotate(360deg)}}';
+  document.head.appendChild(s);
+}
+
 let _isSyncingMissing = false;
 
 async function syncMissingDaysBackground(channel, tree) {
@@ -418,11 +467,12 @@ async function syncMissingDaysBackground(channel, tree) {
   if (missingDates.length === 0) return;
   
   _isSyncingMissing = true;
-  showToast(`Sincronizando ${missingDates.length} día(s) faltante(s)...`, 'warn');
+  showSyncBanner(`Sincronizando ${missingDates.length} día(s) faltante(s)... (0 / ${missingDates.length})`, 'syncing');
   
   let successCount = 0;
   for (let i = 0; i < missingDates.length; i++) {
     const d = missingDates[i];
+    showSyncBanner(`Descargando ${d.dateKey}... (${i + 1} / ${missingDates.length})`, 'syncing');
     try {
       const saved = await syncDayBackground(channel, d.year, d.month, d.day);
       if (saved) successCount++;
@@ -438,9 +488,11 @@ async function syncMissingDaysBackground(channel, tree) {
   
   _isSyncingMissing = false;
   if (successCount > 0) {
-    showToast(`Sincronización completada (${successCount} recuperados)`, 'ok');
+    showSyncBanner(`✓ Sincronización completada — ${successCount} día(s) recuperado(s). Recargando...`, 'success');
+    setTimeout(() => window.location.reload(), 2500);
   } else {
-    showToast(`Sincronización finalizada (sin datos nuevos)`, 'ok');
+    showSyncBanner('Sincronización finalizada — no había días nuevos.', 'success');
+    setTimeout(() => hideSyncBanner(), 4000);
   }
 }
 
