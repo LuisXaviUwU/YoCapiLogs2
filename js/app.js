@@ -76,7 +76,7 @@ let _custEventHubAvatar = null;
 let _custSettings = { 
   accentColor: '#9146ff', bgStyle: 'light', fontSize: 16, 
   showBorder: false, borderWidth: 2, borderColor: '',
-  relief3D: false, showCapibara: false, fontFamily: 'Inter', 
+  relief3D: false, showCapibara: false, capibaraImage: 'capibara.png', fontFamily: 'Inter', 
   messageShape: 'rounded', messageShadow: 'none',
   headerGradient: false, headerGradient2: '#6441a5',
   bodyOpacity: 1.0, bodyBgColor: '', bodyRadius: 24,
@@ -779,10 +779,10 @@ function initCustomizer() {
     _custSettings.accentColor = e.target.value;
     setActiveSwatch(null); scheduleRender();
   });
-  document.querySelectorAll('.bg-options .bg-opt:not(.tpl-opt)').forEach(btn => {
+  document.querySelectorAll('.bg-options:not(.capy-options) .bg-opt:not(.tpl-opt)').forEach(btn => {
     btn.addEventListener('click', () => {
       _custSettings.bgStyle = btn.dataset.bg;
-      document.querySelectorAll('.bg-options .bg-opt:not(.tpl-opt)').forEach(b => b.classList.toggle('active', b === btn));
+      document.querySelectorAll('.bg-options:not(.capy-options) .bg-opt:not(.tpl-opt)').forEach(b => b.classList.toggle('active', b === btn));
       scheduleRender();
     });
   });
@@ -816,12 +816,22 @@ function initCustomizer() {
     });
   }
   const capibaraSwitch = document.getElementById('capibara-mode-switch');
+  const capibaraOptionsRow = document.getElementById('capibara-options-row');
   if (capibaraSwitch) {
     capibaraSwitch.addEventListener('change', e => {
       _custSettings.showCapibara = e.target.checked;
+      if (capibaraOptionsRow) capibaraOptionsRow.style.display = e.target.checked ? 'block' : 'none';
       scheduleRender();
     });
   }
+  document.querySelectorAll('.capy-options .bg-opt').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      document.querySelectorAll('.capy-options .bg-opt').forEach(b => b.classList.toggle('active', b === btn));
+      _custSettings.capibaraImage = btn.dataset.capy;
+      _custCapibaraImage = await loadImage(`img/cards/${btn.dataset.capy}`).catch(() => null);
+      scheduleRender();
+    });
+  });
   const fontSelect = document.getElementById('font-family-select');
   if (fontSelect) {
     fontSelect.addEventListener('change', e => {
@@ -938,12 +948,13 @@ function initCustomizer() {
   // ── NEW CONTROLS ──────────────────────────────────
 
   // Body bg: dark / light / custom
-  document.querySelectorAll('.bg-options .bg-opt').forEach(btn => {
+  document.querySelectorAll('.bg-options:not(.capy-options) .bg-opt').forEach(btn => {
     btn.addEventListener('click', () => {
       const bg = btn.dataset.bg;
+      if (!bg) return;
       _custSettings.bgStyle = bg === 'custom' ? 'light' : bg; // keep as light/dark base
       _custSettings.bodyBgColor = bg === 'custom' ? (document.getElementById('body-bg-color-picker')?.value || '') : '';
-      document.querySelectorAll('.bg-options .bg-opt').forEach(b => b.classList.toggle('active', b === btn));
+      document.querySelectorAll('.bg-options:not(.capy-options) .bg-opt').forEach(b => b.classList.toggle('active', b === btn));
       const customRow = document.getElementById('body-bg-custom-row');
       if (customRow) customRow.style.display = bg === 'custom' ? 'block' : 'none';
       scheduleRender();
@@ -1174,7 +1185,7 @@ async function downloadMessageCard(msg, color) {
   _custSettings.messageShadow = 'none';
   
   if (!_custCapibaraImage) {
-    _custCapibaraImage = await loadImage('img/cards/capibara.png').catch(() => null);
+    _custCapibaraImage = await loadImage(`img/cards/${_custSettings.capibaraImage || 'capibara.png'}`).catch(() => null);
   }
   const picker = document.getElementById('custom-color-picker');
   if (picker) picker.value = userColor;
@@ -1241,7 +1252,7 @@ async function downloadMessageCard(msg, color) {
   if (textColorContainerReset) textColorContainerReset.style.display = 'none';
   const bodyBgCustomRow = document.getElementById('body-bg-custom-row');
   if (bodyBgCustomRow) bodyBgCustomRow.style.display = 'none';
-  document.querySelectorAll('.bg-options .bg-opt').forEach(b => b.classList.toggle('active', b.dataset.bg === 'light'));
+  document.querySelectorAll('.bg-options:not(.capy-options) .bg-opt').forEach(b => b.classList.toggle('active', b.dataset.bg === 'light'));
   const preset = COLOR_PRESETS.find(p => p.hex.toLowerCase() === userColor.toLowerCase());
   setActiveSwatch(preset ? userColor : null);
   document.querySelectorAll('.customizer-controls .ctrl-section').forEach(el => {
