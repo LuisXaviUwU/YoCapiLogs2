@@ -507,12 +507,6 @@ function buildMessagesFrag(messages, from, to, lastDayRef) {
     if (dayKey !== lastDayRef.v) {
       lastDayRef.v = dayKey;
       frag.appendChild(createDaySeparator(dayKey));
-    } else if (i > 0) {
-      const prevMsg = messages[i - 1];
-      if (prevMsg && prevMsg.displayName === msg.displayName) {
-        const prevDate = new Date(prevMsg.timestamp);
-        if (date.getTime() - prevDate.getTime() < 60000) isGrouped = true;
-      }
     }
     frag.appendChild(createMessageRow(msg, date, isGrouped));
   }
@@ -567,15 +561,20 @@ function createMessageRow(msg, date, isGrouped = false) {
   row.className = 'msg-row';
   if (isGrouped) row.classList.add('is-grouped');
 
+  row.style.cursor = 'pointer';
+  row.onclick = (e) => {
+    if (!e.target.closest('.msg-action-btn')) {
+      downloadMessageCard(msg, color);
+    }
+  };
+
   const color = sanitizeColor(msg.tags?.color);
   const filterVal = filterInput ? filterInput.value.trim() : '';
   const bodyEl = buildMessageBody(msg, filterVal);
 
-  // Top row: meta + action bar
-  const topRowEl = document.createElement('div');
-  topRowEl.className = 'msg-top-row';
+  const contentWrapperEl = document.createElement('div');
+  contentWrapperEl.className = 'msg-content-wrapper';
 
-  // Meta: badges + username + colon
   const badgesEl = buildBadgesEl(msg.tags);
   const metaEl = document.createElement('span');
   metaEl.className = 'msg-meta';
@@ -585,31 +584,33 @@ function createMessageRow(msg, date, isGrouped = false) {
   userEl.innerHTML = filterVal ? highlightText(escapeHtml(msg.displayName), filterVal) : escapeHtml(msg.displayName);
   const colonEl = document.createElement('span');
   colonEl.className = 'msg-colon';
-  colonEl.textContent = ':';
+  colonEl.textContent = ': ';
   metaEl.appendChild(badgesEl);
   metaEl.appendChild(userEl);
   metaEl.appendChild(colonEl);
 
-  // Action bar
+  contentWrapperEl.appendChild(metaEl);
+  contentWrapperEl.appendChild(bodyEl);
+
   const actionBarEl = document.createElement('div');
   actionBarEl.className = 'msg-action-bar';
   const blerpBtn = document.createElement('button');
   blerpBtn.className = 'msg-action-btn';
   blerpBtn.title = 'Ver como overlay Blerp';
   blerpBtn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>';
-  blerpBtn.onclick = () => openBlerpCard(msg);
+  blerpBtn.onclick = (e) => { e.stopPropagation(); openBlerpCard(msg); };
+  
   const dlBtn = document.createElement('button');
-  dlBtn.className = 'msg-action-btn';
+  dlBtn.className = 'msg-action-btn msg-dl-btn';
   dlBtn.title = 'Personalizar y descargar imagen';
   dlBtn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>';
-  dlBtn.onclick = () => downloadMessageCard(msg, color);
+  dlBtn.onclick = (e) => { e.stopPropagation(); downloadMessageCard(msg, color); };
+  
   actionBarEl.appendChild(blerpBtn);
   actionBarEl.appendChild(dlBtn);
 
-  topRowEl.appendChild(metaEl);
-  topRowEl.appendChild(actionBarEl);
-  row.appendChild(topRowEl);
-  row.appendChild(bodyEl);
+  row.appendChild(contentWrapperEl);
+  row.appendChild(actionBarEl);
   return row;
 }
 
@@ -1337,6 +1338,10 @@ function renderCustomizerCanvas(timeMs = 0, targetCanvas = null) {
   const { accentColor, bgStyle, fontSize, showBorder, borderWidth, borderColor, showCapibara, fontFamily, messageShape, messageShadow, headerGradient, headerGradient2, bodyOpacity, bodyBgColor, bodyRadius: bodyRadiusPx, headerPosition, canvasBg, canvasBgColor1, canvasBgColor2, textBold, textColor } = _custSettings;
   let headerBg, headerText, bodyBg, bodyText, bodyBorder, headerBorder;
   if (bgStyle === 'light') { headerBg = accentColor; headerText = '#ffffff'; bodyBg = bodyBgColor || '#ffffff'; bodyText = '#111111'; }
+  else if (bgStyle === 'dark') { headerBg = accentColor; headerText = '#ffffff'; bodyBg = bodyBgColor || '#1e1e24'; bodyText = '#f2f2ff'; }
+  else if (bgStyle === 'discord') { headerBg = accentColor; headerText = '#ffffff'; bodyBg = bodyBgColor || '#313338'; bodyText = '#dbdee1'; }
+  else if (bgStyle === 'twitch') { headerBg = accentColor; headerText = '#ffffff'; bodyBg = bodyBgColor || '#18181b'; bodyText = '#efeff1'; }
+  else if (bgStyle === 'midnight') { headerBg = accentColor; headerText = '#ffffff'; bodyBg = bodyBgColor || '#000000'; bodyText = '#ffffff'; }
   else { headerBg = accentColor; headerText = '#ffffff'; bodyBg = bodyBgColor || '#1e1e24'; bodyText = '#f2f2ff'; }
   if (textColor) bodyText = textColor;
   if (showBorder) { bodyBorder = borderColor || accentColor; headerBorder = borderColor || accentColor; }
